@@ -1,0 +1,5 @@
+settings:
+  resolution: "1072x1448"
+layout:
+  - row:
+      - widget: weather

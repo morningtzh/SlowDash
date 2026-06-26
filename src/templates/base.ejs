@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>SlowDash</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<!-- 根据是否为预览模式，完全分离 Body -->
+<% if (typeof isPreview !== 'undefined' && isPreview) { %>
+<!-- ================= 浏览器预览模式 (带 Kindle 手机壳) ================= -->
+<body class="bg-gray-300 flex justify-center items-center py-10 min-h-screen relative">
+  <!-- 导航按钮 -->
+  <div class="absolute top-4 left-4 flex gap-4 z-50">
+    <a href="/gallery" class="bg-black text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-800 transition">🎨 去画廊 (Gallery) 看看</a>
+    <button onclick="window.location.reload()" class="bg-white text-black border-2 border-black px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-100 transition">🔄 强制刷新</button>
+    <button onclick="toggleGrid()" class="bg-pink-100 text-pink-700 border-2 border-pink-300 px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-pink-200 transition">📏 显示/隐藏网格</button>
+  </div>
+
+  <!-- Kindle 设备外壳 -->
+  <div style="width: 680px; height: 960px; background: #2a2a2a; border-radius: 40px; padding: 70px 40px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.1); position: relative; display: flex; flex-direction: column; align-items: center;">
+    <!-- 外框限制可视区域，内部用 transform scale 缩小真实 1072x1448 看板 -->
+    <div style="width: 600px; height: 812px; overflow: hidden; background: white; border-radius: 4px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
+      <!-- 渲染真实的 1072x1448 内容，用 scale(0.56) 缩放适配预览框 -->
+      <div style="width: 1072px; height: 1448px; transform: scale(0.56); transform-origin: top left; padding: 20px 36px; box-sizing: border-box; background: white; position: relative;">
+        <!-- 严格遵循规范：184px 基准，20px gap，5列7行网格 -->
+        <div style="display: grid; grid-template-columns: repeat(5, 184px); grid-auto-rows: 184px; gap: 20px; width: 1000px; height: 1408px;">
+          <%- widgetsHtml %>
+        </div>
+        <!-- Grid Overlay (调试辅助) -->
+        <div id="gridOverlay" class="hidden" style="position: absolute; inset: 0; padding: 20px 36px; pointer-events: none; z-index: 50; box-sizing: border-box;">
+          <div style="display: grid; grid-template-columns: repeat(5, 184px); grid-auto-rows: 184px; gap: 20px; width: 1000px; height: 1408px;">
+            <% for(let i=0; i<35; i++) { %>
+              <div style="border: 3px solid #f9a8d4; background: rgba(252,231,243,0.2); border-radius: 32px;"></div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Kindle 底部 Logo -->
+    <div style="color: #111; font-family: -apple-system, sans-serif; font-size: 20px; font-weight: 600; letter-spacing: 4px; text-transform: lowercase; position: absolute; bottom: 25px; text-shadow: 0 1px 1px rgba(255,255,255,0.1);">kindle</div>
+  </div>
+
+  <script>
+    function toggleGrid() {
+      const overlay = document.getElementById('gridOverlay');
+      if (overlay) overlay.classList.toggle('hidden');
+    }
+  </script>
+</body>
+<% } else { %>
+<!-- ================= 真实生成模式 (给 Playwright/Puppeteer 截图用) ================= -->
+<!-- 严格遵守规范：总宽1072，总高1448，左右Margin 36px，上下Margin 20px -->
+<body style="width: 1072px; height: 1448px; margin: 0; padding: 20px 36px; background-color: white; box-sizing: border-box; overflow: hidden;">
+  <!-- 严格遵循规范：184px 基准，20px gap，5列7行网格 -->
+  <div style="display: grid; grid-template-columns: repeat(5, 184px); grid-auto-rows: 184px; gap: 20px; width: 1000px; height: 1408px;">
+    <%- widgetsHtml %>
+  </div>
+</body>
+<% } %>
+</html>

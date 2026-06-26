@@ -1,0 +1,70 @@
+settings:
+  resolution: "1072x1448"
+  color_mode: "grayscale"
+
+# 凭据与插件配置 (抽离所有涉及隐私的 Key)
+# 请复制本文件重命名为 config.yaml，并填写你的真实 Key。
+credentials:
+  weather:
+    # api_key: "YOUR_QWEATHER_KEY"
+    # location: "101010100"
+    # city_name: "北京"
+    # api_host: "https://api.qweather.com" # 免费版填 https://devapi.qweather.com
+  ai_balance:
+    # deepseek_key: "YOUR_DEEPSEEK_KEY"
+    # aliyun_access_key: "YOUR_ALIYUN_ACCESS_KEY"
+    # aliyun_secret_key: "YOUR_ALIYUN_SECRET_KEY"
+  icloud_calendar:
+    # caldav_url: "https://caldav.icloud.com"
+    # username: "YOUR_APPLE_ID"
+    # password: "YOUR_APP_PASSWORD"
+  moviepilot:
+    # url: "http://192.168.31.x:3000"
+    # api_token: "YOUR_MP_TOKEN"
+  plex:
+    # url: "http://192.168.31.x:32400"
+    # token: "YOUR_PLEX_TOKEN"
+  weread:
+    # cookie: "YOUR_WEREAD_COOKIE"
+  github_chart:
+    # username: "torvalds"
+
+# 页面布局 (仅负责展示排版)
+layout:
+  - row:
+      - widget: clock
+        size: small
+      - widget: weather
+        size: small
+  - row:
+      - widget: ai_balance
+        size: medium
+  - row:
+      - widget: moviepilot
+        size: large
+  - row:
+      - widget: countdown
+        size: small
+      - widget: refresh_time
+        size: small
+  - row:
+      - widget: hitokoto
+        size: medium
+  - row:
+      - widget: github_chart
+        size: medium
+  - row:
+      - widget: icloud_calendar
+        size: large
+  - row:
+      - widget: weread
+        size: medium
+  - row:
+      - widget: finance
+        size: medium
+  - row:
+      - widget: daily_comic
+        size: large
+  - row:
+      - widget: unsplash
+        size: large

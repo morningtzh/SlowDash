@@ -1,0 +1,35 @@
+<% if (type === 'forecast') { %>
+  <div class="relative w-full h-full rounded-2xl overflow-hidden bg-white border-2 border-black flex items-center justify-evenly px-2 py-3">
+    <div class="absolute top-1 left-2">
+      <span class="text-black text-[8px] font-black tracking-widest uppercase opacity-40"><%= city %> FORECAST</span>
+    </div>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <span class="text-sm font-bold text-black"><%= error %></span>
+    <% } else { %>
+      <% for (let i = 0; i < hourly.length; i++) { 
+         let time = new Date(hourly[i].fxTime).getHours() + ":00";
+      %>
+        <div class="flex flex-col items-center justify-center pt-2">
+          <span class="text-[9px] font-bold text-gray-500 mb-1"><%= time %></span>
+          <span class="text-xl font-black text-black"><%= hourly[i].temp %>°</span>
+          <span class="text-[9px] font-bold text-black tracking-widest mt-1"><%= hourly[i].text %></span>
+        </div>
+        <% if (i < hourly.length - 1) { %>
+          <div class="w-px h-8 bg-gray-200 mt-2"></div>
+        <% } %>
+      <% } %>
+    <% } %>
+  </div>
+<% } else { %>
+  <!-- Current Weather (1x1 or 2x2) -->
+  <div class="relative w-full h-full rounded-2xl overflow-hidden bg-white border-2 border-black flex flex-col justify-center items-center p-2">
+    <div class="absolute top-1 left-2">
+      <span class="text-black text-[8px] font-black tracking-widest uppercase opacity-40"><%= city %></span>
+    </div>
+    <div class="flex items-baseline gap-0.5 mt-2">
+      <span class="text-4xl font-black text-black tracking-tighter"><%= temp %></span>
+      <span class="text-sm font-bold text-gray-500">°</span>
+    </div>
+    <div class="mt-1 text-[10px] font-bold text-black tracking-widest"><%= text %></div>
+  </div>
+<% } %>

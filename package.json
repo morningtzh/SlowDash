@@ -1,0 +1,37 @@
+{
+  "name": "slowdash",
+  "version": "1.0.0",
+  "description": "A Universal, Widget-Based Thin-Client Dashboard Ecosystem / 模块化万能瘦客户端看板系统",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "jest",
+    "preview": "node src/previewServer.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/morningtzh/SlowDash.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/morningtzh/SlowDash/issues"
+  },
+  "homepage": "https://github.com/morningtzh/SlowDash#readme",
+  "devDependencies": {
+    "jest": "^30.4.2"
+  },
+  "dependencies": {
+    "@alicloud/bssopenapi20171214": "^4.1.1",
+    "@alicloud/openapi-client": "^0.4.15",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "js-yaml": "^5.1.0",
+    "node-ical": "^0.26.1",
+    "playwright": "^1.61.1"
+  }
+}
