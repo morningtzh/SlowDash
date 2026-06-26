@@ -7,13 +7,13 @@ module.exports = async function(config) {
   
   if (config.galleryMode && (!config.url || !config.api_token)) {
     return {
+      type: config.type || 'stats',
       stats: {
         movie_subscribes: 12,
         tv_subscribes: 5,
         downloading: 2,
         seeding: 189
-      },
-      posters: dummyPosters
+      }
     };
   }
 
@@ -21,7 +21,7 @@ module.exports = async function(config) {
   if (config.url && config.api_token) {
     try {
       const baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
-      const res = await fetch(`${baseUrl}/api/v1/plugin/HomePage/statistic?apikey=${config.api_token}`, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(`${baseUrl}/api/v1/plugin/HomePage/statistic?apikey=${config.api_token}`, { signal: AbortSignal.timeout(10000) });
       if (res.ok) {
         const data = await res.json();
         stats = data || {};
@@ -36,11 +36,13 @@ module.exports = async function(config) {
     stats = { "配置缺失": "缺少 Token" };
   }
 
-  return { stats, posters: [] };
+  return { type: config.type || 'stats', stats };
 };
 
-module.exports.supportedSizes = ['5x1', '5x2'];
+module.exports.supportedSizes = ['2x1', '3x1', '5x1', '2x2'];
 module.exports.galleryVariants = [
-  { size: '5x1' },
-  { size: '5x2' }
+  { size: '2x1', type: 'stats' },
+  { size: '3x1', type: 'stats' },
+  { size: '5x1', type: 'stats' },
+  { size: '2x2', type: 'dashboard' }
 ];

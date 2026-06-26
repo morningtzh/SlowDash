@@ -23,7 +23,7 @@ app.get('/', async (req, res) => {
     let widgetsHtml = '';
 
     for (const item of config.layout) {
-      if (item.row) {
+      if (item.row && Array.isArray(item.row)) {
         for (const wConfig of item.row) {
           const widgetHtml = await renderWidget(wConfig, config.credentials);
           widgetsHtml += widgetHtml;
@@ -34,8 +34,14 @@ app.get('/', async (req, res) => {
       }
     }
 
+    let backgroundHtml = '';
+    if (config.background && config.background.widget) {
+      const bgConfig = { ...config.background, size: '5x7', isBackground: true };
+      backgroundHtml = await renderWidget(bgConfig, config.credentials);
+    }
+
     const baseTemplatePath = path.join(__dirname, 'templates', 'base.ejs');
-    const fullHtml = await ejs.renderFile(baseTemplatePath, { widgetsHtml, isPreview: true });
+    const fullHtml = await ejs.renderFile(baseTemplatePath, { widgetsHtml, backgroundHtml, isPreview: true });
     
     res.send(fullHtml);
   } catch (error) {
@@ -161,7 +167,7 @@ app.get('/gallery', async (req, res) => {
   }
 });
 
-app.listen(port, host, () => {
+const server = app.listen(port, host, () => {
   console.log(`🚀 Preview Server running at http://${host}:${port}`);
   console.log(`   - Kindle Layout : http://${host}:${port}/`);
   console.log(`   - Widget Gallery: http://${host}:${port}/gallery`);
@@ -172,5 +178,26 @@ app.listen(port, host, () => {
     });
   } else {
     console.error(err);
+  }
+});
+
+// Handle Ctrl+C and exit immediately
+process.on('SIGINT', () => {
+  console.log('\nExiting preview server (SIGINT)...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\nExiting preview server (SIGTERM)...');
+  process.exit(0);
+});
+
+// Hack for modern terminals (Kitty, Wezterm, Ghostty etc) using CSI-u keyboard protocol.
+// When CSI-u is enabled, Ctrl+C sends `\x1b[99;5u` instead of `\x03`, which bypasses the OS SIGINT handler.
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', (data) => {
+  if (data.includes('\u0003') || data.includes('99;5u')) {
+    console.log('\nExiting preview server (Keyboard Interrupt detected on stdin)...');
+    process.exit(0);
   }
 });

@@ -46,6 +46,11 @@ async function renderWidget(widgetConfig, globalCredentials = {}) {
   const widgetDir = path.join(__dirname, 'widgets', widgetName);
   const sizeClasses = getGridClasses(widgetConfig.size || 'small');
 
+  let positionClasses = '';
+  if (widgetConfig.row && widgetConfig.col) {
+    positionClasses = ` row-start-${widgetConfig.row} col-start-${widgetConfig.col}`;
+  }
+
   // 合并全局凭据与组件内部排版配置
   const mergedConfig = { 
     ...globalCredentials[widgetName], 
@@ -54,7 +59,14 @@ async function renderWidget(widgetConfig, globalCredentials = {}) {
 
   // Widget Wrapper (Handles the standard rounded corners and grid sizing)
   // 墨水屏高反差：纯白底、2px 纯黑边框、32px 统一大圆角
-  const wrapperStart = `<div class="${sizeClasses} bg-white rounded-[32px] overflow-hidden flex w-full h-full border-2 border-black box-border relative">`;
+  let wrapperStart = `<div class="${sizeClasses}${positionClasses} bg-white rounded-[32px] overflow-hidden flex w-full h-full border-2 border-black box-border relative">`;
+  if (widgetConfig.isBackground) {
+    // 背景模式下，剥离白底和边框，直接全覆盖容器
+    wrapperStart = `<div class="w-full h-full relative overflow-hidden bg-white">`;
+  } else if (widgetConfig.transparent) {
+    // 透明模式：保留圆角但去除背景和边框
+    wrapperStart = `<div class="${sizeClasses}${positionClasses} rounded-[32px] overflow-hidden flex w-full h-full box-border relative">`;
+  }
   const wrapperEnd = `</div>`;
 
   if (!fs.existsSync(widgetDir)) {
@@ -71,7 +83,29 @@ async function renderWidget(widgetConfig, globalCredentials = {}) {
     const fetcher = require(path.join(widgetDir, 'fetcher.js'));
     const templatePath = path.join(widgetDir, 'template.ejs');
     
-    const data = await fetcher(mergedConfig);
+    const cache = require('./cache');
+    // Remove transient properties from config before hashing for cache
+    const cacheConfig = { ...mergedConfig };
+    delete cacheConfig.galleryMode;
+    const cacheKey = `widget_fetch_${widgetName}_${JSON.stringify(cacheConfig)}`;
+    
+    let data;
+    const noCacheWidgets = ['clock', 'countdown', 'text', 'refresh_time'];
+    const ttl = fetcher.cacheTtl !== undefined ? fetcher.cacheTtl : (noCacheWidgets.includes(widgetName) ? 0 : 300);
+
+    if (ttl > 0) {
+      data = cache.get(cacheKey);
+    }
+    
+    if (!data) {
+      data = await fetcher(mergedConfig);
+      if (ttl > 0) {
+        // If there's an error, only cache for 10 seconds to allow quick recovery, otherwise use full TTL
+        const actualTtl = data.error ? 10 : ttl;
+        cache.set(cacheKey, data, actualTtl);
+      }
+    }
+    
     const renderData = { ...data, config: mergedConfig };
     const innerHtml = await ejs.renderFile(templatePath, renderData);
     

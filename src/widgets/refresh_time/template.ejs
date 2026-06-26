@@ -1,4 +1,11 @@
-<div class="p-4 w-full h-full flex flex-col items-center justify-center text-center">
-  <p class="text-gray-500 font-medium text-lg">最后刷新时间</p>
-  <p class="text-2xl font-bold mt-2"><%= time %></p>
-</div>
+<% if (config.size === '2x1') { %>
+  <div class="flex items-center justify-center gap-4 w-full h-full">
+    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">最后刷新时间</span>
+    <span class="text-3xl font-black tabular-nums"><%= time %></span>
+  </div>
+<% } else { %>
+  <div class="flex flex-col items-center justify-center w-full h-full p-2 text-center">
+    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">最后刷新</span>
+    <span class="text-2xl font-black tabular-nums mt-1"><%= time %></span>
+  </div>
+<% } %>

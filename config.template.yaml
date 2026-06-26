@@ -2,6 +2,34 @@ settings:
   resolution: "1072x1448"
   color_mode: "grayscale"
 
+# 输出存储配置：默认本地 (local)。要使用 S3，请将 type 改为 s3 或 both 并填写下面的 s3 字段。
+storage:
+  type: local # local | s3 | both (both: 同时保存本地和上传 S3)
+  # s3:
+  #   # 方式 A: 使用预签名 PUT URL（推荐，客户端无需 AWS SDK）
+  #   presigned_put_url: "https://your-presigned-put-url-for-dashboard.png"
+  #
+  #   # 方式 B: 直接使用 AWS 或 S3 兼容服务（如 Cloudflare R2）的凭据
+  #   # 以下字段在方式 B 中必需：
+  #   bucket: "your-bucket-name"
+  #   region: "cn-north-1"                 # AWS 区域或 R2 使用 "auto"
+  #   access_key_id: "YOUR_ACCESS_KEY"     # AWS Access Key 或 R2 API Token ID
+  #   secret_access_key: "YOUR_SECRET_KEY" # AWS Secret Key 或 R2 API Token
+  #   endpoint: "https://..."              # 可选，S3 兼容端点（如 R2: https://<account-id>.r2.cloudflarestorage.com）
+  #   key_prefix: "dashboards/"            # S3 中的文件路径前缀
+  #   public: true                         # 上传时尝试设置为公开读（ACL: public-read）
+  #   public_url: "https://your-public-bucket-url"  # 公开访问的基础 URL，生成的 dashboard/update 链接将基于它拼接
+  #   forcePathStyle: true                 # 可选，某些 S3 兼容服务需要（如 MinIO）
+  #
+  #   # 完整示例（Cloudflare R2）：
+  #   # bucket: "my-dashboard-bucket"
+  #   # region: "auto"
+  #   # endpoint: "https://1234567890abcdef.r2.cloudflarestorage.com"
+  #   # access_key_id: "your-r2-api-token-id"
+  #   # secret_access_key: "your-r2-api-token-secret"
+  #   # key_prefix: "dashboards/"
+  #   # public: true
+
 # 凭据与插件配置 (抽离所有涉及隐私的 Key)
 # 请复制本文件重命名为 config.yaml，并填写你的真实 Key。
 credentials:
@@ -29,42 +57,47 @@ credentials:
   github_chart:
     # username: "torvalds"
 
-# 页面布局 (仅负责展示排版)
+# 独立的背景配置层 (渲染在最底层铺满全屏)
+background:
+  # widget: unsplash
+  # type: background
+
+# 页面布局 (仅负责前景组件排版)
 layout:
-  - row:
-      - widget: clock
-        size: small
-      - widget: weather
-        size: small
-  - row:
-      - widget: ai_balance
-        size: medium
-  - row:
-      - widget: moviepilot
-        size: large
-  - row:
-      - widget: countdown
-        size: small
-      - widget: refresh_time
-        size: small
-  - row:
-      - widget: hitokoto
-        size: medium
-  - row:
-      - widget: github_chart
-        size: medium
-  - row:
-      - widget: icloud_calendar
-        size: large
-  - row:
-      - widget: weread
-        size: medium
-  - row:
-      - widget: finance
-        size: medium
-  - row:
-      - widget: daily_comic
-        size: large
-  - row:
-      - widget: unsplash
-        size: large
+  # Row 1-2: 顶部天气预报与时钟
+  - widget: weather
+    size: 4x1
+    type: hourly
+    row: 1
+    col: 1
+  - widget: clock
+    size: 1x2
+    type: digital
+    row: 1
+    col: 5
+
+  # Row 3: 并排的统计数据
+  - widget: ai_balance
+    size: 2x1
+    type: balance
+    row: 3
+    col: 1
+  - widget: weread
+    size: 2x1
+    type: stats
+    row: 3
+    col: 4
+
+  # Row 5: 居中数据
+  - widget: moviepilot
+    size: 3x1
+    type: stats
+    row: 5
+    col: 2
+
+  # Row 7: 底部格言
+  - widget: hitokoto
+    size: 5x1
+    type: minimal
+    row: 7
+    col: 1

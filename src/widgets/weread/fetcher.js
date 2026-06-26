@@ -1,36 +1,57 @@
 module.exports = async function(config) {
-  if (config.galleryMode && !config.cookie) {
-    return { readTime: "125小时30分", readDays: 365, booksCount: 42 };
+  if (config.galleryMode && !config.api_key) {
+    return { type: config.type || 'stats', readTime: "125小时30分", readDays: 365, booksCount: 42 };
   }
   
-  if (!config.cookie) {
-    return { readTime: "未配置", readDays: "--", booksCount: "--" };
+  if (!config.api_key) {
+    return { type: config.type || 'stats', error: "未配置 API Key" };
   }
   
   try {
-    const res = await fetch("https://i.weread.qq.com/user/notebooks", {
+    const res = await fetch("https://i.weread.qq.com/api/agent/gateway", {
+      method: "POST",
       headers: { 
-        "Cookie": config.cookie, 
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.api_key}`
       },
-      signal: AbortSignal.timeout(5000)
+      body: JSON.stringify({
+        api_name: "/readdata/detail",
+        mode: "overall",
+        skill_version: "1.0.3"
+      }),
+      signal: AbortSignal.timeout(10000)
     });
     
-    // As notebooks API returns books data, we can mock/estimate reading stats or wait for correct API
-    // Actually the standard API is usually /user/mine or we can parse HTML
-    // We'll use dummy data merged with real response status for now.
-    if (res.ok) {
-      return { readTime: "已连接", readDays: 128, booksCount: 12 };
+    const data = await res.json();
+    if (data.errcode === 0 || !data.errcode) {
+      let readCount = 0;
+      if (data.readStat) {
+         const readItem = data.readStat.find(s => s.stat.includes('读过') || s.stat.includes('阅读'));
+         if (readItem) readCount = parseInt(readItem.counts) || 0;
+      }
+      
+      const hours = Math.floor((data.totalReadTime || 0) / 3600);
+      const minutes = Math.floor(((data.totalReadTime || 0) % 3600) / 60);
+
+      return { 
+        type: config.type || 'stats', 
+        readTime: `${hours}H ${minutes}M`, 
+        readDays: data.readDays || 0, 
+        booksCount: readCount || 0 
+      };
+    } else {
+      return { type: config.type || 'stats', error: data.errmsg || "API Error" };
     }
   } catch (e) {
     console.error("WeRead error:", e);
+    return { type: config.type || 'stats', error: "Net Err" };
   }
-  
-  return { readTime: "Error", readDays: "Err", booksCount: "Err" };
 };
 
-module.exports.supportedSizes = ['5x1', '5x2'];
+module.exports.supportedSizes = ['2x1', '3x1', '5x1', '2x2', '3x2'];
 module.exports.galleryVariants = [
-  { size: '5x1' },
-  { size: '5x2' }
+  { size: '2x1', type: 'stats' },
+  { size: '3x1', type: 'stats' },
+  { size: '5x1', type: 'stats' },
+  { size: '2x2', type: 'detail' }
 ];

@@ -1,0 +1,14 @@
+{
+  "name": "SlowDash",
+  "priority": 50,
+  "items": [
+    {
+      "name": "Check for Updates",
+      "action": "bin/check_update.sh"
+    },
+    {
+      "name": "Refresh Dashboard",
+      "action": "bin/display_dashboard.sh"
+    }
+  ]
+}

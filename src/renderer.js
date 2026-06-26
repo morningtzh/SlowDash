@@ -26,7 +26,8 @@ async function renderToImage(htmlContent, settings) {
   
   const page = await context.newPage();
 
-  await page.setContent(htmlContent, { waitUntil: 'networkidle' });
+  await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(500);
 
   if (settings.color_mode === 'grayscale') {
     // 增加对比度(contrast)和调整亮度(brightness)，针对墨水屏 16 级灰度优化阶调

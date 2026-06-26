@@ -1,17 +1,49 @@
-<div class="p-6 w-full h-full flex flex-col justify-center bg-white text-black border-2 border-black rounded-3xl">
-  <div class="flex items-center gap-2 mb-4">
-    <div class="w-3 h-3 bg-black rounded-full"></div>
-    <p class="text-sm font-bold uppercase tracking-wider">API Balance</p>
+<% if (type === 'compact') { %>
+  <!-- Type: compact (1x1) -->
+  <div class="relative w-full h-full p-3 flex flex-col justify-center items-center">
+    <% if (balances && balances.length > 0) { %>
+      <div class="absolute top-3 left-3 text-[9px] font-bold uppercase text-gray-400"><%= balances[0].name %></div>
+      <div class="flex items-baseline min-w-0">
+        <span class="text-[10px] font-bold mr-1 text-gray-500"><%= balances[0].currency %></span>
+        <span class="text-4xl font-black tabular-nums tracking-tighter text-black truncate max-w-[140px]"><%= balances[0].balance %></span>
+      </div>
+    <% } else { %>
+      <span class="text-xs font-bold text-black">No Data</span>
+    <% } %>
   </div>
-  
-  <div class="space-y-3">
-    <div class="flex justify-between items-baseline border-b border-gray-200 pb-2">
-      <span class="text-lg font-medium text-gray-700">DeepSeek</span>
-      <span class="font-bold text-2xl">¥ <%= deepseek %></span>
-    </div>
-    <div class="flex justify-between items-baseline">
-      <span class="text-lg font-medium text-gray-700">Aliyun</span>
-      <span class="font-bold text-2xl text-gray-500">¥ <%= aliyun %></span>
-    </div>
+<% } else { %>
+  <!-- Type: balance (e.g. 2x2, 2x1, 3x1) -->
+  <div class="flex flex-col w-full h-full p-5 justify-center">
+    <div class="text-[10px] font-bold text-gray-400 uppercase mb-4 tracking-widest">API Balances</div>
+    <% if (config.size === '2x1' || config.size === '3x1') { %>
+      <!-- Horizontal layout for x1 heights -->
+      <div class="flex items-center justify-around flex-grow">
+        <% balances.forEach((b, index) => { %>
+          <div class="flex flex-col items-center">
+            <span class="text-base font-bold text-gray-700 uppercase tracking-wider"><%= b.name %></span>
+            <div class="flex items-baseline mt-1 min-w-0">
+              <span class="text-xs font-bold mr-1 text-gray-500"><%= b.currency %></span>
+              <span class="text-5xl font-black tabular-nums tracking-tighter text-black truncate max-w-[140px]"><%= b.balance %></span>
+            </div>
+          </div>
+          <% if (index < balances.length - 1) { %>
+            <div class="w-px h-10 bg-gray-200"></div>
+          <% } %>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <!-- Vertical list for 2x2 -->
+      <div class="flex flex-col w-full justify-center gap-4">
+        <% balances.forEach((b) => { %>
+          <div class="flex justify-between items-baseline border-b border-gray-200 pb-3 last:border-0 last:pb-0">
+            <span class="text-base font-bold text-gray-700 uppercase tracking-wider flex-shrink-0 mr-4"><%= b.name %></span>
+            <div class="flex items-baseline min-w-0 truncate">
+              <span class="text-xs font-bold mr-1 text-gray-500"><%= b.currency %></span>
+              <span class="text-4xl font-black tabular-nums tracking-tighter text-black truncate max-w-[180px]"><%= b.balance %></span>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
   </div>
-</div>
+<% } %>

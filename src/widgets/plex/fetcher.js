@@ -16,10 +16,10 @@ module.exports = async function(config) {
   if (config.url && config.token) {
     try {
       const baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
-      const url = `${baseUrl}/library/sections/1/all?sort=addedAt%3Adesc&X-Plex-Token=${config.token}`;
+      const url = `${baseUrl}/library/recentlyAdded?X-Plex-Token=${config.token}`;
       const res = await fetch(url, {
         headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(10000)
       });
       
       if (res.ok) {
@@ -31,7 +31,7 @@ module.exports = async function(config) {
         // Filter for items with a thumb
         let validItems = items.filter(i => i.thumb);
         
-        if (config.type === 'random_poster') {
+        if (config.type === 'random_poster' || config.type === 'poster_wall') {
             // Shuffle
             validItems.sort(() => 0.5 - Math.random());
         }

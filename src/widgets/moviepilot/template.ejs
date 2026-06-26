@@ -1,16 +1,30 @@
-<div class="relative w-full h-full rounded-2xl overflow-hidden bg-white border-2 border-black flex items-center justify-evenly px-4">
-  <div class="absolute top-2 left-3">
-    <span class="text-black text-[9px] font-black tracking-widest uppercase opacity-40">MoviePilot</span>
+<% 
+  const keys = Object.keys(stats);
+  const labelMap = { movie_subscribes: '电影', tv_subscribes: '剧集', downloading: '下载', seeding: '做种' };
+%>
+<% if (type === 'dashboard') { %>
+  <!-- Type: dashboard -->
+  <div class="relative w-full h-full flex flex-col justify-center items-center gap-6 p-4">
+    <div class="absolute top-3 left-4 text-[9px] font-black uppercase tracking-widest text-gray-400 opacity-40">MoviePilot Stats</div>
+    <% for(let i=0; i<Math.min(keys.length, 2); i++) { const key = keys[i]; %>
+      <div class="flex flex-col items-center">
+        <span class="text-6xl font-black text-black leading-none tabular-nums"><%= stats[key] %></span>
+        <span class="text-sm text-gray-500 font-bold uppercase tracking-widest mt-2"><%= labelMap[key] || key %></span>
+      </div>
+    <% } %>
   </div>
-  <% 
-    const keys = Object.keys(stats);
-    const labelMap = { movie_subscribes: '电影', tv_subscribes: '剧集', downloading: '下载', seeding: '做种' };
-    for(let i=0; i<Math.min(keys.length, 4); i++) { 
-      const key = keys[i];
-  %>
-    <div class="flex flex-col items-center mt-2">
-      <span class="text-2xl font-black text-black leading-none"><%= stats[key] %></span>
-      <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1"><%= labelMap[key] || key %></span>
-    </div>
-  <% } %>
-</div>
+<% } else { %>
+  <!-- Type: stats -->
+  <div class="relative w-full h-full flex items-center justify-evenly p-4">
+    <div class="absolute top-3 left-4 text-[9px] font-black uppercase tracking-widest text-gray-400 opacity-40">MoviePilot</div>
+    <% for(let i=0; i<Math.min(keys.length, 4); i++) { const key = keys[i]; %>
+      <div class="flex flex-col items-center min-w-0 flex-shrink px-2">
+        <span class="text-4xl font-black text-black leading-none tabular-nums truncate max-w-full"><%= stats[key] %></span>
+        <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2 whitespace-nowrap"><%= labelMap[key] || key %></span>
+      </div>
+      <% if (i < Math.min(keys.length, 4) - 1) { %>
+        <div class="w-px h-8 bg-black opacity-20 flex-shrink-0"></div>
+      <% } %>
+    <% } %>
+  </div>
+<% } %>

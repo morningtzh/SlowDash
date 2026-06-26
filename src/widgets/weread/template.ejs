@@ -1,23 +1,45 @@
-<div class="relative w-full h-full rounded-2xl overflow-hidden bg-white border-2 border-black flex items-center justify-evenly px-2">
-  <div class="absolute top-2 left-3">
-    <span class="text-black text-[9px] font-black tracking-widest uppercase opacity-40">WeRead</span>
+<% if (type === 'detail') { %>
+  <!-- Type: detail -->
+  <div class="relative w-full h-full flex flex-col justify-center items-center gap-6 p-4">
+    <div class="absolute top-3 left-4 text-[9px] font-black tracking-widest uppercase text-gray-400 opacity-40">WeRead</div>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="text-black font-bold text-sm"><%= error %></div>
+    <% } else { %>
+      <div class="flex flex-col items-center">
+        <span class="text-6xl font-black text-black leading-none tabular-nums tracking-tighter"><%= readDays %></span>
+        <span class="text-lg text-gray-500 font-bold tracking-widest mt-2 uppercase">Days</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-6xl font-black text-black leading-none truncate max-w-[90%] tracking-tighter"><%= readTime %></span>
+        <span class="text-lg text-gray-500 font-bold tracking-widest mt-2 uppercase">Time</span>
+      </div>
+      <div class="flex flex-col items-center">
+        <span class="text-6xl font-black text-black leading-none tabular-nums tracking-tighter"><%= booksCount %></span>
+        <span class="text-lg text-gray-500 font-bold tracking-widest mt-2 uppercase">Books</span>
+      </div>
+    <% } %>
   </div>
-  <% if (typeof error !== 'undefined' && error) { %>
-    <div class="text-black font-bold text-sm mt-3"><%= error %></div>
-  <% } else { %>
-    <div class="flex flex-col items-center mt-2">
-      <span class="text-2xl font-black text-black leading-none"><%= readTime %></span>
-      <span class="text-[9px] text-gray-500 font-bold tracking-widest mt-1">总阅读</span>
-    </div>
-    <div class="w-px h-6 bg-gray-300 mt-2"></div>
-    <div class="flex flex-col items-center mt-2">
-      <span class="text-2xl font-black text-black leading-none"><%= readDays %></span>
-      <span class="text-[9px] text-gray-500 font-bold tracking-widest mt-1">天连续</span>
-    </div>
-    <div class="w-px h-6 bg-gray-300 mt-2"></div>
-    <div class="flex flex-col items-center mt-2">
-      <span class="text-2xl font-black text-black leading-none"><%= booksCount %></span>
-      <span class="text-[9px] text-gray-500 font-bold tracking-widest mt-1">本读过</span>
-    </div>
-  <% } %>
-</div>
+<% } else { %>
+  <!-- Type: stats -->
+  <div class="relative w-full h-full flex items-center justify-evenly p-4">
+    <div class="absolute top-3 left-4 text-[9px] font-black tracking-widest uppercase text-gray-400 opacity-40">WeRead</div>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="text-black font-bold text-sm"><%= error %></div>
+    <% } else { %>
+      <div class="flex flex-col items-center min-w-0 flex-shrink px-2">
+        <span class="text-5xl font-black text-black leading-none tabular-nums tracking-tighter"><%= readDays %></span>
+        <span class="text-xs text-gray-500 font-bold tracking-widest mt-2 whitespace-nowrap uppercase">Days</span>
+      </div>
+      <div class="w-px h-12 bg-gray-300 flex-shrink-0"></div>
+      <div class="flex flex-col items-center min-w-0 flex-shrink px-2">
+        <span class="text-5xl font-black text-black leading-none truncate max-w-full tracking-tighter"><%= readTime %></span>
+        <span class="text-xs text-gray-500 font-bold tracking-widest mt-2 whitespace-nowrap uppercase">Time</span>
+      </div>
+      <div class="w-px h-12 bg-gray-300 flex-shrink-0"></div>
+      <div class="flex flex-col items-center min-w-0 flex-shrink px-2">
+        <span class="text-5xl font-black text-black leading-none tabular-nums tracking-tighter"><%= booksCount %></span>
+        <span class="text-xs text-gray-500 font-bold tracking-widest mt-2 whitespace-nowrap uppercase">Books</span>
+      </div>
+    <% } %>
+  </div>
+<% } %>

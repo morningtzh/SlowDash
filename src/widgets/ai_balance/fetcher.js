@@ -1,22 +1,26 @@
 // SDKs required dynamically to prevent crashes before npm install finishes
 
 module.exports = async function(config) {
-  if (config.galleryMode && !config.deepseek_key && !config.aliyun_access_key) return { deepseek: "1024.50", aliyun: "88.00" };
+  const balances = [];
   
-  let deepseek = "0.00";
-  let aliyun = "0.00";
+  if (config.galleryMode && !config.deepseek_key && !config.aliyun_access_key) {
+    balances.push({ name: "DeepSeek", balance: "1024.50", currency: "¥" });
+    balances.push({ name: "Aliyun", balance: "88.00", currency: "¥" });
+    return { type: config.type || 'balance', balances };
+  }
   
   if (config.deepseek_key) {
     try {
       const res = await fetch('https://api.deepseek.com/user/balance', {
-        headers: { 'Authorization': `Bearer ${config.deepseek_key}` }
+        headers: { 'Authorization': `Bearer ${config.deepseek_key}` },
+        signal: AbortSignal.timeout(10000)
       });
       const data = await res.json();
       if (data.is_available) {
-        deepseek = data.balance_infos?.[0]?.total_balance || "0.00";
+        balances.push({ name: "DeepSeek", balance: data.balance_infos?.[0]?.total_balance || "0.00", currency: "¥" });
       }
     } catch (e) {
-      deepseek = "Error";
+      balances.push({ name: "DeepSeek", balance: "Error", currency: "¥" });
     }
   }
 
@@ -32,17 +36,23 @@ module.exports = async function(config) {
       const client = new BssOpenApi.default(clientConfig);
       const response = await client.queryAccountBalance();
       if (response && response.body && response.body.data) {
-        aliyun = response.body.data.availableAmount;
+        balances.push({ name: "Aliyun", balance: response.body.data.availableAmount, currency: "¥" });
       } else {
-        aliyun = "Err Data";
+        balances.push({ name: "Aliyun", balance: "Err", currency: "¥" });
       }
     } catch(e) {
       console.error("Aliyun API Error:", e.message);
-      aliyun = "Key/Auth Err";
+      balances.push({ name: "Aliyun", balance: "Auth Err", currency: "¥" });
     }
   }
 
-  return { deepseek, aliyun };
+  return { type: config.type || 'balance', balances };
 };
 
-module.exports.supportedSizes = ['2x2', '4x2'];
+module.exports.supportedSizes = ['1x1', '2x1', '3x1', '2x2'];
+module.exports.galleryVariants = [
+  { size: '2x2', type: 'balance' },
+  { size: '3x1', type: 'balance' },
+  { size: '2x1', type: 'balance' },
+  { size: '1x1', type: 'compact' }
+];

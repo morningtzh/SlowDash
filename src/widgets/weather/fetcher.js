@@ -15,28 +15,33 @@ module.exports = async function(config) {
   const location = config.location || "101010100";
   const host = config.api_host || 'https://devapi.qweather.com';
   
-  if (config.type === 'forecast') {
+  if (config.type === 'forecast' || config.type === 'hourly' || config.type === 'hourly_chart') {
     try {
       const url = `${host}/v7/weather/24h?location=${location}&key=${config.api_key}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
       const data = await res.json();
       if (data.code == 200 || data.code === "200") {
+        let sliceLen = 6;
+        if (config.size === '3x1') sliceLen = 4;
+        if (config.size === '4x1') sliceLen = 5;
+        if (config.size === '5x1') sliceLen = 7;
+        if (config.size === '2x3' || config.size === '2x4' || config.size === '3x2') sliceLen = 6;
         return {
-          type: 'forecast',
+          type: config.type === 'hourly_chart' ? 'hourly_chart' : 'hourly',
           city: config.city_name || "City",
-          hourly: data.hourly.slice(0, 6) // limit to next 6 hours for layout
+          hourly: data.hourly.slice(0, sliceLen) // dynamic limit based on layout size
         };
       } else {
-        return { type: 'forecast', error: `Code ${data.code || data.error?.status}` };
+        return { type: config.type === 'hourly_chart' ? 'hourly_chart' : 'hourly', city: config.city_name || "City", error: `Code ${data.code || data.error?.status}` };
       }
     } catch(e) {
-      return { type: 'forecast', error: "Net Err" };
+      return { type: config.type === 'hourly_chart' ? 'hourly_chart' : 'hourly', city: config.city_name || "City", error: "Net Err" };
     }
   } else {
     // Current weather
     try {
       const url = `${host}/v7/weather/now?location=${location}&key=${config.api_key}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
       const data = await res.json();
       if (data.code == 200 || data.code === "200") {
         return {
@@ -50,7 +55,7 @@ module.exports = async function(config) {
       }
     } catch (e) {
       console.error("Weather error:", e.message);
-      return { type: 'current', temp: "Err", text: "Net Err", city: e.message.substring(0, 12) };
+      return { type: 'current', temp: "Err", text: "Net Err", city: config.city_name || "API 报错" };
     }
   }
 };

@@ -24,23 +24,23 @@ module.exports = async function(config) {
     
     if (eventsToUse && Array.isArray(eventsToUse)) {
       const processedEvents = eventsToUse.map(ev => ({
-        name: ev.name,
-        days: calculateDays(ev.date, ev.event_type),
-        isPast: calculateDays(ev.date, ev.event_type) < 0 && ev.event_type === 'countdown'
+        name: ev.name || ev.event,
+        days: calculateDays(ev.date || ev.target, ev.event_type),
+        isPast: calculateDays(ev.date || ev.target, ev.event_type) < 0 && ev.event_type === 'countdown'
       }));
       return { type: 'multiple', events: processedEvents };
     }
   }
 
   // Single mode
-  const dateStr = config.date || '2027-01-01';
+  const dateStr = config.date || config.target || '2027-01-01';
   const name = config.name || config.event || 'Next Year';
   const event_type = config.event_type || 'countdown';
   
   const days = calculateDays(dateStr, event_type);
   
   return { 
-    type: 'single', 
+    type: config.type || 'single', 
     name, 
     days: Math.abs(days),
     event_type 

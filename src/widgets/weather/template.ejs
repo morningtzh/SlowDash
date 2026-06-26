@@ -1,35 +1,96 @@
-<% if (type === 'forecast') { %>
-  <div class="relative w-full h-full rounded-2xl overflow-hidden bg-white border-2 border-black flex items-center justify-evenly px-2 py-3">
-    <div class="absolute top-1 left-2">
-      <span class="text-black text-[8px] font-black tracking-widest uppercase opacity-40"><%= city %> FORECAST</span>
+<% 
+  const weatherEmojiMap = {
+    "晴": "☀️", "多云": "⛅", "阴": "☁️",
+    "阵雨": "🌦️", "雷阵雨": "⛈️", "雷阵雨伴有冰雹": "⛈️",
+    "小雨": "🌧️", "中雨": "🌧️", "大雨": "🌧️", "暴雨": "🌧️", "大暴雨": "🌧️", "特大暴雨": "🌧️", "冻雨": "🌧️",
+    "小到中雨": "🌧️", "中到大雨": "🌧️", "大到暴雨": "🌧️", "暴雨到大暴雨": "🌧️", "大暴雨到特大暴雨": "🌧️", "雨": "🌧️",
+    "小雪": "🌨️", "中雪": "🌨️", "大雪": "🌨️", "暴雪": "🌨️", "小到中雪": "🌨️", "中到大雪": "🌨️", "大到暴雪": "🌨️", "雪": "🌨️",
+    "雨夹雪": "🌨️", "雨雪天气": "🌨️", "阵雪": "🌨️",
+    "雾": "🌫️", "薄雾": "🌫️", "霾": "😷",
+    "沙尘暴": "🌪️", "扬沙": "🌪️", "浮尘": "🌪️", "强沙尘暴": "🌪️", "冰雹": "🧊"
+  };
+  function getEmoji(t) {
+    if (!t) return "";
+    if (weatherEmojiMap[t]) return weatherEmojiMap[t];
+    for (let key in weatherEmojiMap) {
+      if (t.includes(key)) return weatherEmojiMap[key];
+    }
+    return "☁️";
+  }
+%>
+<% if (type === 'hourly' || type === 'hourly_chart') { %>
+  <div class="relative w-full h-full p-4 flex flex-col overflow-hidden">
+    <% 
+       const [cols, rows] = (config.size || '3x1').split('x').map(Number);
+       const wPx = cols * 184 + (cols - 1) * 20;
+       const hPx = rows * 184 + (rows - 1) * 20;
+    %>
+    <!-- 大字号水印背景 -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+      <span class="text-black opacity-5 font-black uppercase tracking-tighter whitespace-nowrap" style="font-size: <%= Math.min(wPx, hPx) * 0.6 %>px;"><%= city %></span>
     </div>
+
     <% if (typeof error !== 'undefined' && error) { %>
-      <span class="text-sm font-bold text-black"><%= error %></span>
+      <div class="flex items-center justify-center flex-grow z-10">
+        <span class="text-sm font-bold text-black"><%= error %></span>
+      </div>
     <% } else { %>
-      <% for (let i = 0; i < hourly.length; i++) { 
-         let time = new Date(hourly[i].fxTime).getHours() + ":00";
-      %>
-        <div class="flex flex-col items-center justify-center pt-2">
-          <span class="text-[9px] font-bold text-gray-500 mb-1"><%= time %></span>
-          <span class="text-xl font-black text-black"><%= hourly[i].temp %>°</span>
-          <span class="text-[9px] font-bold text-black tracking-widest mt-1"><%= hourly[i].text %></span>
-        </div>
-        <% if (i < hourly.length - 1) { %>
-          <div class="w-px h-8 bg-gray-200 mt-2"></div>
+      <div class="flex items-center justify-evenly w-full flex-grow z-10 pb-4">
+        <% 
+           const colWidth = (wPx - 32) / hourly.length;
+           const availHeight = (type === 'hourly_chart') ? (hPx * 0.55) : (hPx - 30);
+
+           const tempSize = Math.max(14, Math.min(colWidth * 0.45, availHeight * 0.45));
+           const timeSize = Math.max(9, Math.min(colWidth * 0.18, availHeight * 0.15));
+           const textSize = Math.max(9, Math.min(colWidth * 0.18, availHeight * 0.15));
+        %>
+        <% for (let i = 0; i < hourly.length; i++) { 
+           let time = new Date(hourly[i].fxTime).getHours() + ":00";
+        %>
+          <div class="flex flex-col items-center justify-center flex-1 min-w-0">
+            <span class="font-bold text-gray-500 mb-1 whitespace-nowrap" style="font-size: <%= timeSize %>px;"><%= time %></span>
+            <span class="font-black text-black leading-none my-1" style="font-size: <%= tempSize %>px;"><%= hourly[i].temp %>°</span>
+            <span class="font-bold text-black tracking-widest mt-1 whitespace-nowrap truncate w-full text-center" style="font-size: <%= textSize %>px;"><%= getEmoji(hourly[i].text) %> <%= hourly[i].text %></span>
+          </div>
         <% } %>
+      </div>
+      <% if (type === 'hourly_chart') { 
+           const temps = hourly.map(h => parseInt(h.temp));
+           const minT = Math.min(...temps) - 2;
+           const maxT = Math.max(...temps) + 2;
+           const range = maxT - minT;
+           const points = temps.map((t, i) => {
+             const x = (i / Math.max(1, temps.length - 1)) * 100;
+             const y = 100 - ((t - minT) / Math.max(1, range)) * 100;
+             return `${x},${y}`;
+           }).join(' ');
+      %>
+      <div class="absolute bottom-6 left-6 right-6 h-1/3 pointer-events-none z-10">
+        <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" class="overflow-visible">
+          <polyline points="<%= points %>" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
       <% } %>
     <% } %>
   </div>
 <% } else { %>
-  <!-- Current Weather (1x1 or 2x2) -->
-  <div class="relative w-full h-full rounded-2xl overflow-hidden bg-white border-2 border-black flex flex-col justify-center items-center p-2">
-    <div class="absolute top-1 left-2">
-      <span class="text-black text-[8px] font-black tracking-widest uppercase opacity-40"><%= city %></span>
+  <!-- Current Weather -->
+  <% 
+     const [cols, rows] = (config.size || '1x1').split('x').map(Number);
+     const wPx = cols * 184 + (cols - 1) * 20;
+     const hPx = rows * 184 + (rows - 1) * 20;
+     const bgFontSize = Math.min(wPx, hPx) * 0.6;
+     const tempFontSize = Math.min(wPx * 0.55, hPx * 0.45, 180);
+     const textFontSize = Math.max(10, Math.min(wPx * 0.15, hPx * 0.12, 32));
+  %>
+  <div class="relative w-full h-full p-4 flex flex-col justify-center items-center overflow-hidden z-10">
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+      <span class="text-black opacity-5 font-black uppercase tracking-tighter whitespace-nowrap" style="font-size: <%= bgFontSize %>px;"><%= city %></span>
     </div>
-    <div class="flex items-baseline gap-0.5 mt-2">
-      <span class="text-4xl font-black text-black tracking-tighter"><%= temp %></span>
-      <span class="text-sm font-bold text-gray-500">°</span>
+    
+    <div class="flex-grow flex flex-col items-center justify-center z-10 w-full text-center">
+      <span class="font-black tracking-tighter text-black leading-none" style="font-size: <%= tempFontSize %>px;"><%= temp %>°</span>
+      <span class="font-bold tracking-widest text-black mt-2 whitespace-nowrap truncate w-full" style="font-size: <%= textFontSize %>px;"><%= getEmoji(text) %> <%= text %></span>
     </div>
-    <div class="mt-1 text-[10px] font-bold text-black tracking-widest"><%= text %></div>
   </div>
 <% } %>

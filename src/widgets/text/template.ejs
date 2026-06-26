@@ -1,0 +1,15 @@
+<% if (type === 'vertical') { %>
+  <!-- Type: vertical (竖排文本) -->
+  <div class="w-full h-full p-6 flex justify-center items-center relative">
+    <div class="absolute top-4 right-4 text-[9px] font-black tracking-widest uppercase text-gray-300 opacity-50 pointer-events-none" style="writing-mode: vertical-rl;">TEXT</div>
+    <div class="text-black font-black text-2xl tracking-widest break-all overflow-hidden whitespace-pre-wrap" style="writing-mode: vertical-rl; text-orientation: mixed; line-height: 1.6; max-height: 100%; max-width: 100%;"><%= text %></div>
+  </div>
+<% } else { %>
+  <!-- Type: horizontal (横排文本) -->
+  <div class="w-full h-full p-6 flex flex-col justify-center items-center relative text-center">
+    <div class="absolute top-4 left-4 text-[9px] font-black tracking-widest uppercase text-gray-300 opacity-50 pointer-events-none">TEXT</div>
+    <div class="text-black font-black text-2xl tracking-tighter leading-relaxed break-words overflow-hidden flex-grow flex items-center justify-center w-full whitespace-pre-wrap">
+      <span class="w-full overflow-hidden" style="display: -webkit-box; -webkit-box-orient: vertical;"><%= text %></span>
+    </div>
+  </div>
+<% } %>
