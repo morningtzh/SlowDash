@@ -83,10 +83,28 @@ wait_for_suspend() {
             local EVENT=$(lipc-wait-event -s "${REMAINING}" com.lab126.powerd readyToSuspend,wakeupFromSuspend,resuming 2>/dev/null)
             
             case "${EVENT}" in
-                readyToSuspend*|wakeupFromSuspend*|resuming*)
+                readyToSuspend*)
                     REMAINING=$(( ENDTIME - $(date +%s) ))
                     if [ "$REMAINING" -gt 0 ]; then
                         lipc-set-prop -i com.lab126.powerd rtcWakeup "${REMAINING}" 2>/dev/null || true
+                    fi
+                    ;;
+                wakeupFromSuspend*|resuming*)
+                    local BECAME_ACTIVE=0
+                    for i in 1 2 3 4; do
+                        local STATUS=$(lipc-get-prop com.lab126.powerd status 2>/dev/null)
+                        case "$STATUS" in
+                            *"Active"*)
+                                BECAME_ACTIVE=1
+                                break
+                                ;;
+                        esac
+                        sleep 0.5
+                    done
+                    
+                    if [ "$BECAME_ACTIVE" = "1" ]; then
+                        echo "[SlowDash] User unlocked device during wait, aborting wait." >> "$LOG_FILE"
+                        break
                     fi
                     ;;
             esac
