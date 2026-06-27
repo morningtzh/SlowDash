@@ -3,6 +3,61 @@
   <div class="flex items-center justify-center w-full h-full p-2">
     <span class="text-4xl font-black tabular-nums tracking-tighter text-black"><%= time %></span>
   </div>
+<% } else if (config.type === 'date') { %>
+  <!-- Type: date -->
+  <% if (config.size === '2x1') { %>
+    <!-- Size: 2x1 -->
+    <div class="flex flex-col w-full h-full p-4 relative">
+      <div class="flex-grow flex items-center justify-center gap-6">
+        <div class="flex flex-col items-end text-right">
+          <span class="text-2xl font-bold tracking-tight text-gray-700 leading-none"><%= weekday %></span>
+          <span class="text-5xl font-black text-black mt-2"><%= dateStr %></span>
+        </div>
+        <div class="w-px h-16 bg-gray-300"></div>
+        <span class="text-4xl font-bold tabular-nums tracking-tighter text-gray-500"><%= time %></span>
+      </div>
+      <div class="w-full text-center mt-1">
+        <span class="text-sm font-medium text-gray-500 tracking-widest"><%= lunarDate %></span>
+      </div>
+    </div>
+  <% } else if (config.size === '1x2') { %>
+    <!-- Size: 1x2 -->
+    <div class="flex flex-col w-full h-full p-4">
+      <div class="flex-grow flex flex-col justify-center items-center">
+        <span class="text-3xl font-bold tracking-tight text-gray-700 leading-none"><%= weekday %></span>
+        <span class="text-5xl font-black text-black mt-3"><%= dateStr %></span>
+        <div class="w-12 h-px bg-gray-300 my-4"></div>
+        <span class="text-3xl font-bold tabular-nums tracking-tighter text-gray-500"><%= time %></span>
+      </div>
+      <div class="w-full text-center mt-1 whitespace-nowrap overflow-hidden text-ellipsis">
+        <span class="text-xs font-medium text-gray-500 tracking-widest"><%= lunarDate %></span>
+      </div>
+    </div>
+  <% } else if (config.size === '2x2') { %>
+    <!-- Size: 2x2 -->
+    <div class="flex flex-col w-full h-full p-6">
+      <div class="flex-grow flex flex-col justify-center items-center">
+        <span class="text-4xl font-bold tracking-tight text-gray-700 leading-none"><%= weekday %></span>
+        <span class="text-[80px] font-black text-black mt-4 leading-none"><%= dateStr %></span>
+        <span class="text-4xl font-bold tabular-nums tracking-tighter text-gray-400 mt-8"><%= time %></span>
+      </div>
+      <div class="w-full text-center mt-2">
+        <span class="text-lg font-medium text-gray-500 tracking-widest"><%= lunarDate %></span>
+      </div>
+    </div>
+  <% } else { %>
+    <!-- Size: 1x1 (default date) -->
+    <div class="flex flex-col w-full h-full p-3">
+      <div class="flex-grow flex flex-col justify-center items-center">
+        <span class="text-xl font-bold tracking-tight text-gray-700 leading-none"><%= weekday %></span>
+        <span class="text-3xl font-black text-black mt-1"><%= dateStr %></span>
+        <span class="text-xs font-bold tabular-nums text-gray-500 mt-2"><%= time %></span>
+      </div>
+      <div class="w-full text-center mt-1 whitespace-nowrap overflow-hidden text-ellipsis">
+        <span class="text-[10px] font-medium text-gray-500 tracking-widest"><%= lunarDate %></span>
+      </div>
+    </div>
+  <% } %>
 <% } else { %>
   <!-- Type: digital -->
   <% if (config.size === '2x1') { %>

@@ -70,7 +70,10 @@ layout:
 
   // Generate Image
   console.log("Taking screenshot with Puppeteer (this might take a few seconds)...");
+  const renderStartTime = Date.now();
   const imageBuffer = await renderToImage(fullHtml, config.settings);
+  const renderDuration = Date.now() - renderStartTime;
+  console.log(`[INFO] Puppeteer rendering completed in ${renderDuration}ms`);
 
   // Save Local
   const outputDir = path.join(__dirname, 'output');
@@ -93,8 +96,10 @@ layout:
         const filename = 'dashboard.png';
         const key = `${keyPrefix}${filename}`;
         console.log('[INFO] Uploading dashboard.png to S3 bucket...');
+        const s3StartTime = Date.now();
         const { url } = await uploadFileToS3(s3cfg, outputPath, key);
-        console.log('[INFO] Uploaded dashboard.png to S3 at:', url);
+        const s3Duration = Date.now() - s3StartTime;
+        console.log(`[INFO] Uploaded dashboard.png to S3 in ${s3Duration}ms at:`, url);
       } else {
         console.warn('[WARN] S3 configured but no presigned_put_url or bucket provided.');
       }
@@ -104,9 +109,12 @@ layout:
   }
   if (releaseOTA) {
     try {
-      const publicBaseUrl = config.storage && (config.storage.type === 's3' || config.storage.type === 'both')
-        ? (config.storage.s3 && config.storage.s3.public_url) || null
-        : null;
+      const s3cfgForOta = config.storage && (config.storage.type === 's3' || config.storage.type === 'both') ? config.storage.s3 : null;
+      let publicBaseUrl = null;
+      if (s3cfgForOta && s3cfgForOta.public_url) {
+        const prefix = (s3cfgForOta.key_prefix || '').replace(/^\/+/, '').replace(/\/+$/, '');
+        publicBaseUrl = s3cfgForOta.public_url.replace(/\/+$/, '') + (prefix ? '/' + prefix : '');
+      }
       const { manifest, archivePath } = packClientAssets(outputDir, { publicBaseUrl });
       console.log(`✅ Kindle OTA package created at: ${archivePath}`);
       console.log(`✅ Manifest generated with version: ${manifest.version}`);
@@ -121,18 +129,17 @@ layout:
           if (s3cfg.bucket) {
             const keyPrefix = s3cfg.key_prefix || '';
             const otaKey = `${keyPrefix}clients/kindle/update.tar.gz`;
-            console.log('[INFO] Uploading OTA package to S3...');
+            console.log('[INFO] Uploading OTA artifacts to S3...');
+            const otaS3StartTime = Date.now();
             await uploadFileToS3(s3cfg, archivePath, otaKey);
-            
             const mrKey = `${keyPrefix}clients/kindle/slowdash-mr-installer.tar.gz`;
-            console.log('[INFO] Uploading MR Installer package to S3...');
             await uploadFileToS3(s3cfg, mrInstallerPath, mrKey);
             
             const manifestPath = path.join(outputDir, 'clients', 'manifest.json');
             const manifestKey = `${keyPrefix}clients/manifest.json`;
-            console.log('[INFO] Uploading manifest to S3...');
             await uploadFileToS3(s3cfg, manifestPath, manifestKey);
-            console.log('[INFO] OTA package, MR Installer package and manifest uploaded to S3');
+            const otaS3Duration = Date.now() - otaS3StartTime;
+            console.log(`[INFO] OTA package, MR Installer package and manifest uploaded to S3 in ${otaS3Duration}ms`);
           }
         } catch (err) {
           console.error('[ERROR] Failed to upload OTA artifacts to S3:', err.message);
@@ -149,6 +156,6 @@ layout:
 }
 
 run().catch(err => {
-  console.error(err);
+  console.error('[ERROR]', err);
   process.exit(1);
 });

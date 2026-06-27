@@ -14,9 +14,24 @@ if [ -z "$SLOWDASH_SERVER_URL" ]; then
   exit 1
 fi
 
-TARGET_DIR="${SLOWDASH_CLIENT_ROOT:-/mnt/us/slowdash}"
+TARGET_DIR="${SLOWDASH_CLIENT_ROOT:-/mnt/us/extensions/slowdash}"
+mkdir -p "$TARGET_DIR"
+
+LOG_FILE="${SLOWDASH_LOG_FILE:-$TARGET_DIR/slowdash.log}"
+exec >> "$LOG_FILE" 2>&1
+
+print_msg() {
+  echo "$1"
+  if command -v eips >/dev/null 2>&1; then
+    eips 2 38 "$1" >/dev/null 2>&1 || true
+  fi
+}
+
+echo "======================================"
+print_msg "[SlowDash] Manual dashboard refresh started at $(date '+%Y-%m-%d %H:%M:%S')"
+
 TMPDIR="${SLOWDASH_TMPDIR:-/tmp/slowdash}"
-mkdir -p "$TARGET_DIR" "$TMPDIR"
+mkdir -p "$TMPDIR"
 
 if [ -n "$SLOWDASH_IMAGE_URL" ]; then
   IMAGE_URL="$SLOWDASH_IMAGE_URL"
@@ -29,26 +44,56 @@ IMAGE_PATH="$TARGET_DIR/dashboard.png"
 IMAGE_TMP="$TMPDIR/dashboard.png"
 
 if command -v curl >/dev/null 2>&1; then
-  echo "[SlowDash] Downloading dashboard image from $IMAGE_URL"
-  curl -fsSL "$IMAGE_URL" -o "$IMAGE_TMP"
+  DOWNLOADER="curl -kfsSL"
 elif command -v wget >/dev/null 2>&1; then
-  echo "[SlowDash] Downloading dashboard image from $IMAGE_URL"
-  wget -qO "$IMAGE_TMP" "$IMAGE_URL"
+  DOWNLOADER="wget -qO-"
 else
-  echo "[SlowDash] curl or wget is required to refresh the Kindle screen."
+  print_msg "[SlowDash] curl or wget is required to refresh the Kindle screen."
   exit 1
 fi
 
-mv "$IMAGE_TMP" "$IMAGE_PATH"
+download_file() {
+  local url="$1"
+  local dest="$2"
+  if $DOWNLOADER "$url" > "$dest"; then
+    return 0
+  fi
+  if echo "$url" | grep -q "^https://"; then
+    local http_url=$(echo "$url" | sed 's|^https://|http://|')
+    print_msg "[SlowDash] HTTPS failed, retrying with HTTP: $http_url"
+    if $DOWNLOADER "$http_url" > "$dest"; then
+      return 0
+    fi
+  fi
+  return 1
+}
 
-echo "[SlowDash] Refreshed local image at $IMAGE_PATH"
+TIMESTAMP=$(date +%s)
+CACHE_BUSTED_URL="${IMAGE_URL}?t=${TIMESTAMP}"
 
-if command -v eips >/dev/null 2>&1; then
-  echo "[SlowDash] Sending image to Kindle display via eips"
-  eips -g "$IMAGE_PATH" >/dev/null 2>&1 || echo "[SlowDash] eips refresh failed"
-elif command -v fbink >/dev/null 2>&1; then
-  echo "[SlowDash] Sending image to Kindle display via fbink"
-  fbink -g "$IMAGE_PATH" >/dev/null 2>&1 || echo "[SlowDash] fbink refresh failed"
+print_msg "[SlowDash] Downloading dashboard image..."
+if ! download_file "$CACHE_BUSTED_URL" "$IMAGE_TMP"; then
+  print_msg "[SlowDash] Failed to download dashboard image."
+  exit 1
+fi
+
+mv "$IMAGE_TMP" "$IMAGE_PATH" 2>/dev/null || cat "$IMAGE_TMP" > "$IMAGE_PATH" && rm -f "$IMAGE_TMP"
+
+print_msg "[SlowDash] Refreshed local image at $IMAGE_PATH"
+
+FBINK_CMD=""
+if command -v fbink >/dev/null 2>&1; then
+  FBINK_CMD="fbink"
+elif [ -x "$TARGET_DIR/fbink" ]; then
+  FBINK_CMD="$TARGET_DIR/fbink"
+fi
+
+if [ -n "$FBINK_CMD" ]; then
+  print_msg "[SlowDash] Sending image to display via fbink..."
+  $FBINK_CMD -g file="$IMAGE_PATH",halign=CENTER,valign=CENTER || print_msg "[SlowDash] fbink refresh failed"
+elif command -v eips >/dev/null 2>&1; then
+  print_msg "[SlowDash] Sending image to display via eips..."
+  eips -g "$IMAGE_PATH" || print_msg "[SlowDash] eips refresh failed"
 else
-  echo "[SlowDash] No supported E-Ink display tool found (eips/fbink)."
+  print_msg "[SlowDash] No supported E-Ink tool found (eips/fbink)."
 fi

@@ -48,9 +48,8 @@ function packClientAssets(outputDir = path.join(__dirname, '..', 'output'), opti
     fs.writeFileSync(configPath, updatedConfig);
   }
 
-  const tarBase = tempDir;
-  const tarName = 'kindle';
-  const result = spawnSync('tar', ['-czf', archivePath, '-C', tarBase, tarName], { stdio: 'inherit' });
+  const tarBase = stagedKindleDir;
+  const result = spawnSync('tar', ['-czf', archivePath, '-C', tarBase, '.'], { stdio: 'inherit' });
   if (result.error || result.status !== 0) {
     throw new Error('Failed to create Kindle client update archive.');
   }
@@ -65,7 +64,7 @@ function packClientAssets(outputDir = path.join(__dirname, '..', 'output'), opti
     package_url: publicBaseUrl ? buildPublicUrl({ public_url: publicBaseUrl }, 'clients/kindle/update.tar.gz') : null,
     dashboard_url: publicBaseUrl ? buildPublicUrl({ public_url: publicBaseUrl }, 'dashboard.png') : null,
     image_url: publicBaseUrl ? buildPublicUrl({ public_url: publicBaseUrl }, 'dashboard.png') : null,
-    update_url: publicBaseUrl ? buildPublicUrl({ public_url: publicBaseUrl }, 'clients/kindle/update.tar.gz') : null,
+    update_url: publicBaseUrl ? buildPublicUrl({ public_url: publicBaseUrl }, 'clients/kindle/update.tar.gz') + '?v=' + Date.now() : null,
     public_url: publicBaseUrl,
     hash_algorithm: 'sha256',
     updated_at: new Date().toISOString()
@@ -94,9 +93,9 @@ function packClientAssetsMRInstaller(outputDir = path.join(__dirname, '..', 'out
   const extensionsDir = path.join(tempDir, 'extensions', 'slowdash');
   fs.mkdirSync(extensionsDir, { recursive: true });
 
-  fs.cpSync(kindleSource, path.join(extensionsDir, 'data'), { recursive: true });
+  fs.cpSync(kindleSource, extensionsDir, { recursive: true });
 
-  const configPath = path.join(extensionsDir, 'data', 'config.sh');
+  const configPath = path.join(extensionsDir, 'config.sh');
   if (publicBaseUrl) {
     const configContent = fs.readFileSync(configPath, 'utf8');
     const updatedConfig = configContent.replace(
@@ -106,66 +105,29 @@ function packClientAssetsMRInstaller(outputDir = path.join(__dirname, '..', 'out
     fs.writeFileSync(configPath, updatedConfig);
   }
 
-  const installScript = `#!/bin/sh
-
-INSTALL_DIR="/mnt/us/slowdash"
-KUAL_EXT_DIR="/mnt/us/extensions/slowdash"
-mkdir -p "$INSTALL_DIR"
-
-cp -r "$(dirname "$0")/data/"* "$INSTALL_DIR/" 2>/dev/null || true
-
-if [ -f "$INSTALL_DIR/bin/display_dashboard.sh" ]; then
-  chmod +x "$INSTALL_DIR/bin/"*.sh
-fi
-
-# 为 KUAL 创建菜单入口
-mkdir -p "$KUAL_EXT_DIR"
-if [ -f "$(dirname "$0")/menu.json" ]; then
-  cp "$(dirname "$0")/menu.json" "$KUAL_EXT_DIR/"
-fi
-
-echo "SlowDash Kindle client installed at $INSTALL_DIR"
-`;
-
-  const uninstallScript = `#!/bin/sh
-
-INSTALL_DIR="/mnt/us/slowdash"
-KUAL_EXT_DIR="/mnt/us/extensions/slowdash"
-
-if [ -d "$INSTALL_DIR" ]; then
-  rm -rf "$INSTALL_DIR"
-fi
-
-if [ -d "$KUAL_EXT_DIR" ]; then
-  rm -rf "$KUAL_EXT_DIR"
-fi
-
-echo "SlowDash Kindle client uninstalled."
-`;
-
-  const installPathSrc = path.join(kindleSource, 'install.sh');
-  const uninstallPathSrc = path.join(kindleSource, 'uninstall.sh');
-
-  if (fs.existsSync(installPathSrc)) {
-    fs.copyFileSync(installPathSrc, path.join(extensionsDir, 'install.sh'));
-    fs.chmodSync(path.join(extensionsDir, 'install.sh'), 0o755);
-  } else {
-    fs.writeFileSync(path.join(extensionsDir, 'install.sh'), installScript);
-    fs.chmodSync(path.join(extensionsDir, 'install.sh'), 0o755);
-  }
-
-  if (fs.existsSync(uninstallPathSrc)) {
-    fs.copyFileSync(uninstallPathSrc, path.join(extensionsDir, 'uninstall.sh'));
-    fs.chmodSync(path.join(extensionsDir, 'uninstall.sh'), 0o755);
-  } else {
-    fs.writeFileSync(path.join(extensionsDir, 'uninstall.sh'), uninstallScript);
-    fs.chmodSync(path.join(extensionsDir, 'uninstall.sh'), 0o755);
-  }
-
   const tarBase = tempDir;
   const result = spawnSync('tar', ['-czf', archivePath, '-C', tarBase, 'extensions'], { stdio: 'inherit' });
   if (result.error || result.status !== 0) {
     throw new Error('Failed to create MR Installer package.');
+  }
+
+  // Provide the uncompressed folder for easy web browser drag-and-drop
+  const unpackedOutputDir = path.join(outputKindleDir, 'kual-extension-unpacked');
+  fs.rmSync(unpackedOutputDir, { recursive: true, force: true });
+  fs.mkdirSync(unpackedOutputDir, { recursive: true });
+  fs.cpSync(extensionsDir, path.join(unpackedOutputDir, 'slowdash'), { recursive: true });
+
+  const binPath = path.join(outputKindleDir, 'Update_slowdash_install.bin');
+  const kindletoolResult = spawnSync('kindletool', [
+    'create', 'ota2',
+    '-d', 'k5', '-d', 'pw', '-d', 'pw2', '-d', 'kv', '-d', 'pw3', '-d', 'koa', '-d', 'pw4', '-d', 'kt4', '-d', 'koa2', '-d', 'koa3', '-d', 'pw5',
+    tempDir, binPath
+  ], { stdio: 'ignore' });
+  
+  if (!kindletoolResult.error && kindletoolResult.status === 0) {
+    console.log('[INFO] kindletool found! Generated MRPI installer: Update_slowdash_install.bin');
+  } else {
+    console.log('[WARN] kindletool not found. Outputting .tar.gz format instead of MRPI .bin format. (Please install kindletool if you need the .bin file)');
   }
 
   fs.rmSync(tempDir, { recursive: true, force: true });

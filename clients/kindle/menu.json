@@ -1,14 +1,30 @@
 {
-  "name": "SlowDash",
-  "priority": 50,
   "items": [
     {
-      "name": "Check for Updates",
-      "action": "bin/check_update.sh"
-    },
-    {
-      "name": "Refresh Dashboard",
-      "action": "bin/display_dashboard.sh"
+      "name": "SlowDash",
+      "priority": 50,
+      "items": [
+        {
+          "name": "Start Service",
+          "action": "bin/start_service.sh",
+          "exitmenu": false
+        },
+        {
+          "name": "Stop Service",
+          "action": "bin/stop_service.sh",
+          "exitmenu": false
+        },
+        {
+          "name": "Refresh Dashboard Now",
+          "action": "bin/display_dashboard.sh",
+          "exitmenu": false
+        },
+        {
+          "name": "Check for OTA Updates (S3)",
+          "action": "bin/check_update.sh",
+          "exitmenu": false
+        }
+      ]
     }
   ]
 }

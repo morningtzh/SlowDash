@@ -31,7 +31,9 @@ module.exports = async function(config) {
       const clientConfig = new OpenApi.Config({
         accessKeyId: config.aliyun_access_key,
         accessKeySecret: config.aliyun_secret_key,
-        endpoint: 'business.aliyuncs.com'
+        endpoint: 'business.aliyuncs.com',
+        readTimeout: 10000,
+        connectTimeout: 10000
       });
       const client = new BssOpenApi.default(clientConfig);
       const response = await client.queryAccountBalance();
