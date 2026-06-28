@@ -1,0 +1,26 @@
+#!/bin/sh
+#############################################################################
+### SLOWDASH KINDLE CLIENT — USER CONFIGURATION
+###
+### This file is YOUR personal configuration. It is NEVER overwritten by
+### OTA updates. Any variable set here overrides the defaults in bin/config.sh.
+###
+### Location on Kindle: /mnt/us/extensions/slowdash/config.local.sh
+###
+### Copy this example file and edit to taste:
+###   cp config.local.sh.example config.local.sh
+###   vi config.local.sh
+#############################################################################
+
+# (Required) Your SlowDash server address
+SLOWDASH_SERVER_URL="http://192.168.1.100:3000"
+
+# (Optional) Custom dashboard image URL — overrides the default derived URL
+# IMAGE_URI="http://192.168.1.100:3000/dashboard.png"
+
+# (Optional) Public URL (e.g. S3 bucket, Cloudflare R2)
+# If set, image and OTA updates are fetched from here instead.
+# SLOWDASH_PUBLIC_URL="https://your-bucket.s3.amazonaws.com/slowdash"
+
+# (Optional) Override the update schedule (interval in MINUTES)
+# SCHEDULE="00:00-07:00=120 07:00-22:00=15 22:00-24:00=60"

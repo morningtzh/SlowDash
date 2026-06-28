@@ -19,6 +19,52 @@ function ensureTarAvailable() {
   }
 }
 
+/**
+ * Remove files from the staged directory that must never be shipped in OTA
+ * packages (user config, dev-only files, etc.).
+ */
+function cleanStagedDir(stagedDir) {
+  const toRemove = [
+    'config.local.sh',       // user config — must never be overwritten
+    'config.local.sh.example' // not needed on-device after initial install
+  ];
+  for (const name of toRemove) {
+    const p = path.join(stagedDir, name);
+    if (fs.existsSync(p)) fs.rmSync(p, { force: true });
+  }
+}
+
+/**
+ * Inject publicBaseUrl into config.sh by uncommenting / setting SLOWDASH_PUBLIC_URL.
+ * Works with the new bin/config.sh format.
+ */
+function patchConfigWithPublicUrl(configPath, publicBaseUrl) {
+  if (!publicBaseUrl || !fs.existsSync(configPath)) return;
+
+  let content = fs.readFileSync(configPath, 'utf8');
+
+  // Try to replace an existing (possibly commented) SLOWDASH_PUBLIC_URL line
+  if (content.match(/^#?\s*SLOWDASH_PUBLIC_URL=/m)) {
+    content = content.replace(
+      /^#?\s*SLOWDASH_PUBLIC_URL=.*$/m,
+      `SLOWDASH_PUBLIC_URL="${publicBaseUrl}"`
+    );
+  } else {
+    // Append if not present
+    content += `\nSLOWDASH_PUBLIC_URL="${publicBaseUrl}"\n`;
+  }
+
+  fs.writeFileSync(configPath, content);
+}
+
+/**
+ * Pack OTA update archive (update.tar.gz).
+ *
+ * This archive is extracted directly into the extension directory on the Kindle
+ * (e.g. /mnt/us/extensions/slowdash/) by check_update.sh.  It contains only
+ * the extension files (bin/, config.xml, menu.json, etc.) without wrapping
+ * them in an extensions/slowdash/ prefix.
+ */
 function packClientAssets(outputDir = path.join(__dirname, '..', 'output'), options = {}) {
   const projectRoot = path.join(__dirname, '..');
   const publicBaseUrl = options.publicBaseUrl || null;
@@ -37,16 +83,10 @@ function packClientAssets(outputDir = path.join(__dirname, '..', 'output'), opti
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'slowdash-kindle-'));
   const stagedKindleDir = path.join(tempDir, 'kindle');
   fs.cpSync(kindleSource, stagedKindleDir, { recursive: true });
+  cleanStagedDir(stagedKindleDir);
 
-  const configPath = path.join(stagedKindleDir, 'config.sh');
-  if (publicBaseUrl) {
-    const configContent = fs.readFileSync(configPath, 'utf8');
-    const updatedConfig = configContent.replace(
-      /# 公共可访问的基础 URL（优先级高于 SLOWDASH_SERVER_URL）\n# 例如：https:\/\/your-public-bucket-url\n# SLOWDASH_PUBLIC_URL="https:\/\/your-public-bucket-url"\n/,
-      `# 公共可访问的基础 URL（优先级高于 SLOWDASH_SERVER_URL）\n# 例如：https://your-public-bucket-url\nSLOWDASH_PUBLIC_URL="${publicBaseUrl}"\n`
-    );
-    fs.writeFileSync(configPath, updatedConfig);
-  }
+  // Patch config.sh (now lives in bin/)
+  patchConfigWithPublicUrl(path.join(stagedKindleDir, 'bin', 'config.sh'), publicBaseUrl);
 
   const tarBase = stagedKindleDir;
   const result = spawnSync('tar', ['-czf', archivePath, '-C', tarBase, '.'], { stdio: 'inherit' });
@@ -74,7 +114,14 @@ function packClientAssets(outputDir = path.join(__dirname, '..', 'output'), opti
   return { manifest, archivePath };
 }
 
-function packClientAssetsMRInstaller(outputDir = path.join(__dirname, '..', 'output'), options = {}) {
+/**
+ * Pack a KUAL extension archive for first-time installation.
+ *
+ * This archive wraps the extension files inside extensions/slowdash/ so it can
+ * be extracted directly at the Kindle root (/mnt/us/).  It also provides an
+ * unpacked copy for drag-and-drop via USB.
+ */
+function packKualExtension(outputDir = path.join(__dirname, '..', 'output'), options = {}) {
   const projectRoot = path.join(__dirname, '..');
   const publicBaseUrl = options.publicBaseUrl || null;
   const kindleSource = path.join(projectRoot, 'clients', 'kindle');
@@ -86,49 +133,30 @@ function packClientAssetsMRInstaller(outputDir = path.join(__dirname, '..', 'out
   const outputKindleDir = path.join(outputClientsDir, 'kindle');
   fs.mkdirSync(outputKindleDir, { recursive: true });
 
-  const archivePath = path.join(outputKindleDir, 'slowdash-mr-installer.tar.gz');
+  const archivePath = path.join(outputKindleDir, 'slowdash-kual-extension.tar.gz');
   ensureTarAvailable();
 
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'slowdash-mr-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'slowdash-kual-'));
   const extensionsDir = path.join(tempDir, 'extensions', 'slowdash');
   fs.mkdirSync(extensionsDir, { recursive: true });
 
   fs.cpSync(kindleSource, extensionsDir, { recursive: true });
+  cleanStagedDir(extensionsDir);
 
-  const configPath = path.join(extensionsDir, 'config.sh');
-  if (publicBaseUrl) {
-    const configContent = fs.readFileSync(configPath, 'utf8');
-    const updatedConfig = configContent.replace(
-      /# 公共可访问的基础 URL（优先级高于 SLOWDASH_SERVER_URL）\n# 例如：https:\/\/your-public-bucket-url\n# SLOWDASH_PUBLIC_URL="https:\/\/your-public-bucket-url"\n/,
-      `# 公共可访问的基础 URL（优先级高于 SLOWDASH_SERVER_URL）\n# 例如：https://your-public-bucket-url\nSLOWDASH_PUBLIC_URL="${publicBaseUrl}"\n`
-    );
-    fs.writeFileSync(configPath, updatedConfig);
-  }
+  // Patch config.sh (now lives in bin/)
+  patchConfigWithPublicUrl(path.join(extensionsDir, 'bin', 'config.sh'), publicBaseUrl);
 
   const tarBase = tempDir;
   const result = spawnSync('tar', ['-czf', archivePath, '-C', tarBase, 'extensions'], { stdio: 'inherit' });
   if (result.error || result.status !== 0) {
-    throw new Error('Failed to create MR Installer package.');
+    throw new Error('Failed to create KUAL extension package.');
   }
 
-  // Provide the uncompressed folder for easy web browser drag-and-drop
+  // Provide the uncompressed folder for easy USB drag-and-drop
   const unpackedOutputDir = path.join(outputKindleDir, 'kual-extension-unpacked');
   fs.rmSync(unpackedOutputDir, { recursive: true, force: true });
   fs.mkdirSync(unpackedOutputDir, { recursive: true });
   fs.cpSync(extensionsDir, path.join(unpackedOutputDir, 'slowdash'), { recursive: true });
-
-  const binPath = path.join(outputKindleDir, 'Update_slowdash_install.bin');
-  const kindletoolResult = spawnSync('kindletool', [
-    'create', 'ota2',
-    '-d', 'k5', '-d', 'pw', '-d', 'pw2', '-d', 'kv', '-d', 'pw3', '-d', 'koa', '-d', 'pw4', '-d', 'kt4', '-d', 'koa2', '-d', 'koa3', '-d', 'pw5',
-    tempDir, binPath
-  ], { stdio: 'ignore' });
-  
-  if (!kindletoolResult.error && kindletoolResult.status === 0) {
-    console.log('[INFO] kindletool found! Generated MRPI installer: Update_slowdash_install.bin');
-  } else {
-    console.log('[WARN] kindletool not found. Outputting .tar.gz format instead of MRPI .bin format. (Please install kindletool if you need the .bin file)');
-  }
 
   fs.rmSync(tempDir, { recursive: true, force: true });
 
@@ -138,5 +166,5 @@ function packClientAssetsMRInstaller(outputDir = path.join(__dirname, '..', 'out
 
 module.exports = {
   packClientAssets,
-  packClientAssetsMRInstaller
+  packKualExtension
 };
