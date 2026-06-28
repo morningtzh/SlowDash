@@ -28,9 +28,13 @@ async function renderToImage(htmlContent, settings) {
     
     const page = await context.newPage();
 
-    // 【修改点 1】: 将 waitUntil 从 domcontentloaded 改为 networkidle，确保外部资源请求完成
-    // 设置基础超时时间为 20s，防止复杂页面卡死
-    await page.setContent(htmlContent, { waitUntil: 'networkidle', timeout: 60000 });
+    // 【修改点 1】: 将 waitUntil 从 domcontentloaded 改为 load。
+    // 如果网络请求一直不结束（如长连接），我们通过 try-catch 捕获超时，并交给下方我们自己的 Promise 逻辑来安全等待图片。
+    try {
+      await page.setContent(htmlContent, { waitUntil: 'load', timeout: 25000 });
+    } catch (e) {
+      console.warn('[WARN] page.setContent timeout reached (some background requests might still be pending), proceeding to image wait...');
+    }
     
     // 显式等待所有图像完全加载并解码 (修复 Unsplash & Plex 背景图空白问题)
     await page.evaluate(async () => {

@@ -1,117 +1,119 @@
 #!/bin/sh
-set -e
+#
+##############################################################################
+# SlowDash OTA self-update check.
+# Downloads manifest.json from the server, compares version, and extracts
+# update.tar.gz if a newer version is available.
+##############################################################################
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONFIG_FILE="$ROOT_DIR/config.sh"
+# shellcheck disable=SC2034
+LOG_TAG="ota"
 
-if [ -f "$CONFIG_FILE" ]; then
-  . "$CONFIG_FILE"
+SCRIPT_DIR=$(dirname "$0")
+cd "${SCRIPT_DIR}" || exit 1
+
+FORCE_RUN=0
+if [ "$1" = "force" ]; then
+	FORCE_RUN=1
+	eips 2 38 "Checking for OTA updates...        " 2>/dev/null || true
 fi
 
-if [ -z "$SLOWDASH_SERVER_URL" ]; then
-  echo "[SlowDash] SLOWDASH_SERVER_URL is not configured. Set it in clients/kindle/config.sh or environment."
-  exit 1
+if [ -e "config.sh" ]; then
+	# shellcheck disable=SC1091
+	. ./config.sh
 fi
 
-TARGET_DIR="${SLOWDASH_CLIENT_ROOT:-/mnt/us/extensions/slowdash}"
-mkdir -p "$TARGET_DIR"
-
-LOG_FILE="${SLOWDASH_LOG_FILE:-$TARGET_DIR/slowdash.log}"
-exec >> "$LOG_FILE" 2>&1
-
-print_msg() {
-  echo "$1"
-  if command -v eips >/dev/null 2>&1; then
-    eips 2 38 "$1" >/dev/null 2>&1 || true
-  fi
-}
-
-echo "======================================"
-print_msg "[SlowDash] Manual update check started at $(date '+%Y-%m-%d %H:%M:%S')"
-
-TMPDIR="${SLOWDASH_TMPDIR:-/tmp/slowdash}"
-mkdir -p "$TMPDIR"
-
-if command -v curl >/dev/null 2>&1; then
-  DOWNLOADER="curl -kfsSL"
-elif command -v wget >/dev/null 2>&1; then
-  DOWNLOADER="wget -qO-"
+if [ -e "utils.sh" ]; then
+	# shellcheck disable=SC1091
+	. ./utils.sh
 else
-  print_msg "[SlowDash] curl or wget is required to download updates."
-  exit 1
+	echo "Could not find utils.sh in ${SCRIPT_DIR}"
+	exit 1
 fi
 
-download_file() {
-  local url="$1"
-  local dest="$2"
-  if $DOWNLOADER "$url" > "$dest"; then
-    return 0
-  fi
-  if echo "$url" | grep -q "^https://"; then
-    local http_url=$(echo "$url" | sed 's|^https://|http://|')
-    print_msg "[SlowDash] HTTPS failed, retrying with HTTP: $http_url"
-    if $DOWNLOADER "$http_url" > "$dest"; then
-      return 0
-    fi
-  fi
-  return 1
-}
+TARGET_DIR="${EXTENSION_DIR:-/mnt/us/extensions/slowdash}"
+LOCAL_VERSION_FILE="${OTA_VERSION_FILE:-${TARGET_DIR}/client.version}"
 
-LOCAL_VERSION_FILE="$TARGET_DIR/client.version"
-if [ -n "$SLOWDASH_PUBLIC_URL" ]; then
-  MANIFEST_URL="${SLOWDASH_PUBLIC_URL%/}/clients/manifest.json"
-  UPDATE_URL="${SLOWDASH_PUBLIC_URL%/}/clients/kindle/update.tar.gz"
+# Determine manifest and update URLs
+if [ -n "${SLOWDASH_PUBLIC_URL}" ]; then
+	MANIFEST_URL="${SLOWDASH_PUBLIC_URL%/}/clients/manifest.json"
+	UPDATE_URL="${SLOWDASH_PUBLIC_URL%/}/clients/kindle/update.tar.gz"
 else
-  MANIFEST_URL="${SLOWDASH_SERVER_URL%/}/clients/manifest.json"
-  UPDATE_URL="${SLOWDASH_SERVER_URL%/}/clients/kindle/update.tar.gz"
+	MANIFEST_URL="${SLOWDASH_SERVER_URL%/}/clients/manifest.json"
+	UPDATE_URL="${SLOWDASH_SERVER_URL%/}/clients/kindle/update.tar.gz"
 fi
 
-mkdir -p "$TARGET_DIR"
+logger "Checking for OTA updates"
 
+TMPDIR="/tmp/slowdash_ota"
+mkdir -p "${TMPDIR}"
+
+# Download manifest with cache busting
 TIMESTAMP=$(date +%s)
 CACHE_BUSTED_MANIFEST="${MANIFEST_URL}?t=${TIMESTAMP}"
+# Fallback to HTTP for old Kindles with TLS issues
+CACHE_BUSTED_MANIFEST=$(echo "${CACHE_BUSTED_MANIFEST}" | sed 's|^https://|http://|')
 
-print_msg "[SlowDash] Fetching manifest from $CACHE_BUSTED_MANIFEST"
-if ! download_file "$CACHE_BUSTED_MANIFEST" "$TMPDIR/manifest.json"; then
-  print_msg "[SlowDash] Failed to download manifest."
-  exit 1
+logger "Fetching manifest from ${CACHE_BUSTED_MANIFEST}"
+if ! wget --no-check-certificate -q -O "${TMPDIR}/manifest.json" "${CACHE_BUSTED_MANIFEST}"; then
+	logger "Failed to download manifest."
+	rm -rf "${TMPDIR}"
+	exit 1
 fi
 
-remote_version=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$TMPDIR/manifest.json" | head -n1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
-remote_update_url=$(grep -oE '"update_url"[[:space:]]*:[[:space:]]*"[^"]+"' "$TMPDIR/manifest.json" | head -n1 | sed 's/.*"update_url"[[:space:]]*:[[:space:]]*"\([^\"]*\)".*/\1/')
-if [ -z "$remote_version" ]; then
-  print_msg "[SlowDash] Failed to parse manifest version."
-  cat "$TMPDIR/manifest.json"
-  exit 1
+remote_version=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "${TMPDIR}/manifest.json" | head -n1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+remote_update_url=$(grep -oE '"update_url"[[:space:]]*:[[:space:]]*"[^"]+"' "${TMPDIR}/manifest.json" | head -n1 | sed 's/.*"update_url"[[:space:]]*:[[:space:]]*"\([^\"]*\)".*/\1/')
+
+if [ -z "${remote_version}" ]; then
+	logger "Failed to parse manifest version."
+	rm -rf "${TMPDIR}"
+	exit 1
 fi
 
-if [ -z "$remote_update_url" ]; then
-  remote_update_url="$UPDATE_URL"
+if [ -z "${remote_update_url}" ]; then
+	remote_update_url="${UPDATE_URL}"
 fi
 
 local_version=""
-if [ -f "$LOCAL_VERSION_FILE" ]; then
-  local_version="$(cat "$LOCAL_VERSION_FILE")"
+if [ -f "${LOCAL_VERSION_FILE}" ]; then
+	local_version="$(cat "${LOCAL_VERSION_FILE}")"
 fi
 
-print_msg "[SlowDash] Local version: ${local_version:-none}"
-print_msg "[SlowDash] Remote version: $remote_version"
+logger "Local version: ${local_version:-none}"
+logger "Remote version: ${remote_version}"
 
-if [ "$remote_version" = "$local_version" ]; then
-  print_msg "[SlowDash] Already latest."
-  exit 0
+if [ "${remote_version}" = "${local_version}" ]; then
+	logger "Already latest version."
+	if [ "${FORCE_RUN}" -eq 1 ]; then
+		eips 2 38 "OTA: Already latest version.       " 2>/dev/null || true
+		flush_log_buffer force
+	fi
+	rm -rf "${TMPDIR}"
+	exit 0
 fi
 
-print_msg "[SlowDash] Downloading update package..."
+logger "Downloading update package..."
 CACHE_BUSTED_UPDATE="${remote_update_url}?t=${TIMESTAMP}"
-if ! download_file "$CACHE_BUSTED_UPDATE" "$TMPDIR/update.tar.gz"; then
-  print_msg "[SlowDash] Failed to download update package."
-  exit 1
+# Fallback to HTTP for old Kindles with TLS issues
+CACHE_BUSTED_UPDATE=$(echo "${CACHE_BUSTED_UPDATE}" | sed 's|^https://|http://|')
+if ! wget --no-check-certificate -q -O "${TMPDIR}/update.tar.gz" "${CACHE_BUSTED_UPDATE}"; then
+	logger "Failed to download update package."
+	rm -rf "${TMPDIR}"
+	exit 1
 fi
 
-print_msg "[SlowDash] Extracting update package..."
-tar -xzf "$TMPDIR/update.tar.gz" -C "$TARGET_DIR"
+logger "Extracting update package to ${TARGET_DIR}..."
+mkdir -p "${TARGET_DIR}"
+tar -xzf "${TMPDIR}/update.tar.gz" -C "${TARGET_DIR}"
 
-echo "$remote_version" > "$LOCAL_VERSION_FILE"
-print_msg "[SlowDash] Update installed: $remote_version"
+echo "${remote_version}" > "${LOCAL_VERSION_FILE}"
+logger "OTA update installed: ${remote_version}"
+if [ "${FORCE_RUN}" -eq 1 ]; then
+	eips 2 38 "OTA update installed!              " 2>/dev/null || true
+fi
+
+rm -rf "${TMPDIR}"
+
+if [ "${FORCE_RUN}" -eq 1 ]; then
+	flush_log_buffer force
+fi

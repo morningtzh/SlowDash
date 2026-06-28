@@ -4,7 +4,7 @@ const ejs = require('ejs');
 const { parseConfig } = require('./src/configParser');
 const { renderWidget } = require('./src/widgetEngine');
 const { renderToImage } = require('./src/renderer');
-const { packClientAssets, packClientAssetsMRInstaller } = require('./src/otaPackager');
+const { packClientAssets, packKualExtension } = require('./src/otaPackager');
 const { uploadFileToPresignedUrl } = require('./src/storage/s3Uploader');
 const { uploadFileToS3 } = require('./src/storage/s3Client');
 
@@ -29,7 +29,10 @@ layout:
   }
 
   const config = await parseConfig(configPath);
-  
+  const outputDir = path.join(__dirname, 'output');
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+
+  if (!releaseOTA) {
   // Process Layout
   let widgetsHtml = '';
   const startTime = Date.now();
@@ -76,12 +79,11 @@ layout:
   console.log(`[INFO] Puppeteer rendering completed in ${renderDuration}ms`);
 
   // Save Local
-  const outputDir = path.join(__dirname, 'output');
-  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
   const outputPath = path.join(outputDir, 'dashboard.png');
   fs.writeFileSync(outputPath, imageBuffer);
 
   console.log(`✅ Dashboard image successfully generated at: ${outputPath}`);
+  
   // Optional: upload to external storage if configured
   if (config.storage && (config.storage.type === 's3' || config.storage.type === 'both')) {
     try {
@@ -107,6 +109,8 @@ layout:
       console.error('[ERROR] Failed to upload to S3:', e.message);
     }
   }
+  } // end of !releaseOTA block
+
   if (releaseOTA) {
     try {
       const s3cfgForOta = config.storage && (config.storage.type === 's3' || config.storage.type === 'both') ? config.storage.s3 : null;
@@ -119,8 +123,8 @@ layout:
       console.log(`✅ Kindle OTA package created at: ${archivePath}`);
       console.log(`✅ Manifest generated with version: ${manifest.version}`);
 
-      const { archivePath: mrInstallerPath } = packClientAssetsMRInstaller(outputDir, { publicBaseUrl });
-      console.log(`✅ MR Installer package created at: ${mrInstallerPath}`);
+      const { archivePath: kualExtPath } = packKualExtension(outputDir, { publicBaseUrl });
+      console.log(`✅ KUAL extension package created at: ${kualExtPath}`);
 
       // If S3 is configured and releaseOTA, upload OTA package and manifest as well
       if (config.storage && (config.storage.type === 's3' || config.storage.type === 'both')) {
@@ -132,14 +136,14 @@ layout:
             console.log('[INFO] Uploading OTA artifacts to S3...');
             const otaS3StartTime = Date.now();
             await uploadFileToS3(s3cfg, archivePath, otaKey);
-            const mrKey = `${keyPrefix}clients/kindle/slowdash-mr-installer.tar.gz`;
-            await uploadFileToS3(s3cfg, mrInstallerPath, mrKey);
+            const kualKey = `${keyPrefix}clients/kindle/slowdash-kual-extension.tar.gz`;
+            await uploadFileToS3(s3cfg, kualExtPath, kualKey);
             
             const manifestPath = path.join(outputDir, 'clients', 'manifest.json');
             const manifestKey = `${keyPrefix}clients/manifest.json`;
             await uploadFileToS3(s3cfg, manifestPath, manifestKey);
             const otaS3Duration = Date.now() - otaS3StartTime;
-            console.log(`[INFO] OTA package, MR Installer package and manifest uploaded to S3 in ${otaS3Duration}ms`);
+            console.log(`[INFO] OTA package, KUAL extension and manifest uploaded to S3 in ${otaS3Duration}ms`);
           }
         } catch (err) {
           console.error('[ERROR] Failed to upload OTA artifacts to S3:', err.message);

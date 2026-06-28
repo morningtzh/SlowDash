@@ -18,7 +18,8 @@ describe('OTA packager', () => {
     const extractResult = spawnSync('tar', ['-xzf', archivePath, '-C', extractDir], { stdio: 'pipe' });
     expect(extractResult.status).toBe(0);
 
-    const configPath = path.join(extractDir, 'kindle', 'config.sh');
+    // config.sh now lives under bin/
+    const configPath = path.join(extractDir, 'bin', 'config.sh');
     const configContent = fs.readFileSync(configPath, 'utf8');
     expect(configContent).toContain('SLOWDASH_PUBLIC_URL="https://cdn.example.com/public"');
   });
