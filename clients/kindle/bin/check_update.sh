@@ -104,6 +104,14 @@ fi
 
 logger "Extracting update package to ${TARGET_DIR}..."
 mkdir -p "${TARGET_DIR}"
+
+# Security check: reject paths with directory traversal
+if tar -tzf "${TMPDIR}/update.tar.gz" 2>/dev/null | grep -q '\.\.'; then
+	logger "OTA package contains unsafe paths, rejecting."
+	rm -rf "${TMPDIR}"
+	exit 1
+fi
+
 tar -xzf "${TMPDIR}/update.tar.gz" -C "${TARGET_DIR}"
 
 echo "${remote_version}" > "${LOCAL_VERSION_FILE}"
