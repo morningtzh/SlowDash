@@ -80,9 +80,12 @@ layout:
 
   // Save Local
   const outputPath = path.join(outputDir, 'dashboard.png');
-  fs.writeFileSync(outputPath, imageBuffer);
-
-  console.log(`✅ Dashboard image successfully generated at: ${outputPath}`);
+  try {
+    fs.writeFileSync(outputPath, imageBuffer);
+    console.log(`✅ Dashboard image successfully generated at: ${outputPath}`);
+  } catch (err) {
+    console.error(`❌ Failed to save dashboard image to ${outputPath}:`, err.message);
+  }
   
   // Optional: upload to external storage if configured
   if (config.storage && (config.storage.type === 's3' || config.storage.type === 'both')) {

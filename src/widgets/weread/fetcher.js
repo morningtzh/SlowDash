@@ -1,3 +1,5 @@
+const { fetchWithRetry } = require('../../retryFetch');
+
 module.exports = async function(config) {
   if (config.galleryMode && !config.api_key) {
     return { type: config.type || 'stats', readTime: "125小时30分", readDays: 365, booksCount: 42 };
@@ -8,7 +10,7 @@ module.exports = async function(config) {
   }
   
   try {
-    const res = await fetch("https://i.weread.qq.com/api/agent/gateway", {
+    const res = await fetchWithRetry("https://i.weread.qq.com/api/agent/gateway", {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",

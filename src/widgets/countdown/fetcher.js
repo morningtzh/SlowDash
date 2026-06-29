@@ -42,8 +42,9 @@ module.exports = async function(config) {
   return { 
     type: config.type || 'single', 
     name, 
-    days: Math.abs(days),
-    event_type 
+    days: event_type === 'countdown' ? days : Math.abs(days),
+    event_type,
+    isPast: event_type === 'countdown' && days < 0
   };
 };
 module.exports.supportedSizes = ['1x1', '1x2', '2x2', '3x2', '4x2', 'small'];
