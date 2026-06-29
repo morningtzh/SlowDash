@@ -8,6 +8,18 @@ const { packClientAssets, packKualExtension } = require('./src/otaPackager');
 const { uploadFileToPresignedUrl } = require('./src/storage/s3Uploader');
 const { uploadFileToS3 } = require('./src/storage/s3Client');
 
+/** Deep-merge source into target (only own enumerable keys, no arrays) */
+function deepMerge(target, source) {
+  for (const [k, v] of Object.entries(source)) {
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      if (!target[k] || typeof target[k] !== 'object') target[k] = {};
+      deepMerge(target[k], v);
+    } else if (v !== undefined) {
+      target[k] = v;
+    }
+  }
+}
+
 /**
  * Generate the dashboard: load config, render widgets, screenshot, optionally upload to S3.
  *
@@ -17,6 +29,7 @@ const { uploadFileToS3 } = require('./src/storage/s3Client');
  * @param {boolean} [options.releaseOTA]      - Whether to also pack & upload OTA artifacts
  * @param {object}  [options.s3Overrides]     - Override S3 config fields (access_key_id, secret_access_key, etc.)
  * @param {object}  [options.storageOverride] - Override storage.type (e.g. 's3')
+ * @param {object}  [options.credOverrides]  - Override credentials (e.g. { weather: { api_key: 'xxx' } })
  * @returns {Promise<{outputPath: string, imageBuffer: Buffer, config: object}>}
  */
 async function generateDashboard(options = {}) {
@@ -26,6 +39,7 @@ async function generateDashboard(options = {}) {
     releaseOTA = process.argv.includes('--release-ota'),
     s3Overrides = {},
     storageOverride = null,
+    credOverrides = {},
   } = options;
 
   console.log(`[SlowDash] Generating dashboard...${releaseOTA ? ' (release OTA enabled)' : ''}`);
@@ -55,6 +69,12 @@ layout:
   }
   if (config.storage && config.storage.s3) {
     Object.assign(config.storage.s3, s3Overrides);
+  }
+
+  // Apply credential overrides from environment variables (Secret)
+  if (Object.keys(credOverrides).length > 0) {
+    if (!config.credentials) config.credentials = {};
+    deepMerge(config.credentials, credOverrides);
   }
 
   if (!releaseOTA) {

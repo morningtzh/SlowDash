@@ -1,0 +1,119 @@
+# =============================================================
+# SlowDash ConfigMap — 非敏感配置
+#
+# 凭据部分留空，由 Secret (slowdash-secrets) 通过 CRED__ env 注入。
+# 方法：kubectl apply -f k8s/configmap.yaml
+# =============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slowdash-config
+  namespace: default
+data:
+  config.yaml: |
+    settings:
+      resolution: "1072x1448"
+      color_mode: "grayscale"
+
+    storage:
+      type: both
+      s3:
+        bucket: "blog-assests"
+        region: "auto"
+        endpoint: "https://4fecec78b69bbc8d89486b99d2927e43.r2.cloudflarestorage.com"
+        key_prefix: "slowdash/"
+        public: true
+        forcePathStyle: true
+        public_url: "https://assets.blog.morningtzh.com"
+        # access_key_id / secret_access_key 从 Secret 注入
+
+    credentials:
+      weather:
+        location: "101210101"
+        city_name: "杭州"
+        api_host: "https://jx78m3h46j.re.qweatherapi.com"
+      moviepilot:
+        url: "https://moviepilot.morningtzh.com"
+      plex:
+        url: "https://plex.morningtzh.com"
+      github_chart:
+        username: "morningtzh"
+
+    background:
+      widget: unsplash
+      type: background
+
+    layout:
+      - widget: weather
+        size: 3x1
+        type: hourly
+        row: 1
+        col: 1
+      - widget: clock
+        size: 2x1
+        type: date
+        row: 1
+        col: 4
+        transparent: true
+
+      - widget: plex
+        size: 2x2
+        type: random_poster
+        row: 2
+        col: 1
+      - widget: moviepilot
+        size: 3x1
+        type: stats
+        row: 2
+        col: 3
+      - widget: ai_balance
+        size: 2x1
+        type: balance
+        row: 3
+        col: 3
+        transparent: true
+      - widget: weather
+        size: 1x1
+        type: current
+        row: 3
+        col: 5
+
+      - widget: plex
+        size: 5x2
+        type: poster_wall
+        arrangement: overlap
+        count: 30
+        row: 4
+        col: 1
+        transparent: true
+
+      - widget: hitokoto
+        size: 1x2
+        type: quote_vertical
+        row: 6
+        col: 1
+      - widget: text
+        size: 1x1
+        type: horizontal
+        row: 6
+        col: 2
+        text: "🔥🔥🔥\n🔥🔥🔥\n🔥🔥🔥"
+        transparent: true
+      - widget: weread
+        size: 2x1
+        type: stats
+        row: 6
+        col: 3
+      - widget: unsplash
+        size: 1x2
+        type: gallery
+        row: 6
+        col: 5
+      - widget: countdown
+        size: 3x1
+        type: highlight
+        row: 7
+        col: 2
+        event: "宿主已存活"
+        target: "1992-02-26"
+        event_type: "anniversary"

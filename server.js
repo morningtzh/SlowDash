@@ -27,6 +27,24 @@ for (const [envKey, s3Field] of Object.entries(s3EnvMap)) {
 
 const storageOverride = process.env.STORAGE_TYPE || null;
 
+// --- Build credential overrides from CRED__<section>__<key> env vars ---
+function buildCredOverrides() {
+  const overrides = {};
+  const prefix = 'CRED__';
+  for (const [envKey, val] of Object.entries(process.env)) {
+    if (!envKey.startsWith(prefix) || !val) continue;
+    const parts = envKey.slice(prefix.length).split('__');
+    let cursor = overrides;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i].toLowerCase();
+      if (!cursor[part] || typeof cursor[part] !== 'object') cursor[part] = {};
+      cursor = cursor[part];
+    }
+    cursor[parts[parts.length - 1].toLowerCase()] = val;
+  }
+  return overrides;
+}
+
 // --- Status tracking ---
 let lastSuccessTime = 0;
 let lastError = null;
@@ -51,6 +69,7 @@ async function runGeneration() {
       releaseOTA: false,
       s3Overrides,
       storageOverride,
+      credOverrides: buildCredOverrides(),
     });
     lastSuccessTime = Date.now();
     lastError = null;

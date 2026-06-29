@@ -5,3 +5,4 @@ coverage/
 config.yaml
 generate.log
 reasonix.toml
+.playwright-mcp/
