@@ -49,8 +49,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # main 分支 → latest
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            # 分支名（所有分支）
+            type=ref,event=branch
+            # main 分支额外打 latest
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/docs/update-readme-usage' }}
             # v1.2.3 → 1.2.3, 1.2
             type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
