@@ -3,3 +3,5 @@ output/
 .env
 coverage/
 config.yaml
+generate.log
+reasonix.toml

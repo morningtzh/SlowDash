@@ -87,7 +87,12 @@ async function renderWidget(widgetConfig, globalCredentials = {}) {
     // Remove transient properties from config before hashing for cache
     const cacheConfig = { ...mergedConfig };
     delete cacheConfig.galleryMode;
-    const cacheKey = `widget_fetch_${widgetName}_${JSON.stringify(cacheConfig)}`;
+    let cacheKey;
+    try {
+      cacheKey = `widget_fetch_${widgetName}_${JSON.stringify(cacheConfig)}`;
+    } catch {
+      cacheKey = `widget_fetch_${widgetName}_fallback`;
+    }
     
     let data;
     const noCacheWidgets = ['clock', 'countdown', 'text', 'refresh_time'];

@@ -1,5 +1,7 @@
 // SDKs required dynamically to prevent crashes before npm install finishes
 
+const { fetchWithRetry } = require('../../retryFetch');
+
 module.exports = async function(config) {
   const balances = [];
   
@@ -11,7 +13,7 @@ module.exports = async function(config) {
   
   if (config.deepseek_key) {
     try {
-      const res = await fetch('https://api.deepseek.com/user/balance', {
+      const res = await fetchWithRetry('https://api.deepseek.com/user/balance', {
         headers: { 'Authorization': `Bearer ${config.deepseek_key}` },
         signal: AbortSignal.timeout(10000)
       });

@@ -36,16 +36,16 @@ describe('Widget Engine', () => {
     expect(htmlOutput).toContain('Waiting for API keys');
   });
 
-  it('should render Unsplash images as real img tags for screenshot generation', async () => {
+  it('should render Unsplash images as CSS background for screenshot generation', async () => {
     const htmlOutput = await renderWidget({
       widget: 'unsplash',
       size: '1x2',
       type: 'gallery'
     });
 
-    expect(htmlOutput).toContain('<img');
-    expect(htmlOutput).toContain('object-fit: cover');
-    expect(htmlOutput).toContain('width: 100%');
-    expect(htmlOutput).toContain('height: 100%');
+    expect(htmlOutput).toContain('background-image');
+    expect(htmlOutput).toContain('bg-cover');
+    expect(htmlOutput).toContain('w-full');
+    expect(htmlOutput).toContain('h-full');
   });
 });

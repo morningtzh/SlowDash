@@ -40,6 +40,9 @@ async function uploadFileToS3(cfg, filePath, key) {
   if (!cfg || !cfg.bucket) throw new Error('S3 config.bucket required');
   const client = buildS3Client(cfg);
   const Body = fs.createReadStream(filePath);
+  Body.on('error', (err) => {
+    console.error('[S3] Stream error reading file:', err.message);
+  });
   const params = {
     Bucket: cfg.bucket,
     Key: key,

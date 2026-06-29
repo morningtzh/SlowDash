@@ -6,10 +6,15 @@ const { spawnSync } = require('child_process');
 const { buildPublicUrl } = require('./storage/s3Client');
 
 function computeSha256(filePath) {
-  const hash = crypto.createHash('sha256');
-  const data = fs.readFileSync(filePath);
-  hash.update(data);
-  return hash.digest('hex');
+  try {
+    const hash = crypto.createHash('sha256');
+    const data = fs.readFileSync(filePath);
+    hash.update(data);
+    return hash.digest('hex');
+  } catch (err) {
+    console.error('[OTA] Failed to compute SHA256:', err.message);
+    return '0000000000000000000000000000000000000000';
+  }
 }
 
 function ensureTarAvailable() {

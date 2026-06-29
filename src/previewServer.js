@@ -9,7 +9,7 @@ const { renderWidget } = require('./widgetEngine');
 
 const app = express();
 const port = 3000;
-const host = '192.168.31.233';
+const host = process.env.HOST || '0.0.0.0';
 
 // 1. 原有的 Kindle 布局预览
 app.get('/', async (req, res) => {

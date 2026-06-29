@@ -44,6 +44,9 @@ module.exports = async function(config) {
       const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
       const data = await res.json();
       if (data.code == 200 || data.code === "200") {
+        if (!data.now) {
+          return { type: 'current', temp: "Err", text: "No data", city: config.city_name || "City" };
+        }
         return {
           type: 'current',
           temp: data.now.temp,

@@ -19,18 +19,19 @@ function _writeCache(data) {
   fs.writeFileSync(CACHE_FILE, JSON.stringify(data, null, 2));
 }
 
-function _containsErrorIndicators(value) {
+function _containsErrorIndicators(value, depth = 0) {
   if (value === null || value === undefined) return false;
+  if (depth > 10) return false; // Prevent stack overflow on deeply nested objects
   if (typeof value === 'string') {
     const normalized = value.trim();
-    return ERROR_INDICATORS.includes(normalized) || normalized.includes('Err') || normalized.includes('Net Err') || normalized.includes('Auth Err');
+    return ERROR_INDICATORS.includes(normalized);
   }
   if (Array.isArray(value)) {
-    return value.some((item) => _containsErrorIndicators(item));
+    return value.some((item) => _containsErrorIndicators(item, depth + 1));
   }
   if (typeof value === 'object') {
     if (value.error) return true;
-    return Object.values(value).some((item) => _containsErrorIndicators(item));
+    return Object.values(value).some((item) => _containsErrorIndicators(item, depth + 1));
   }
   return false;
 }

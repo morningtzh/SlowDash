@@ -1,6 +1,8 @@
+const { fetchWithRetry } = require('../../retryFetch');
+
 module.exports = async function(config) {
   try {
-    const response = await fetch('https://v1.hitokoto.cn?c=i&c=d&c=k', { signal: AbortSignal.timeout(10000) });
+    const response = await fetchWithRetry('https://v1.hitokoto.cn?c=i&c=d&c=k', { signal: AbortSignal.timeout(10000) }, 1);
     const data = await response.json();
     return {
       type: config.type || 'quote',
