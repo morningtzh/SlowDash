@@ -7,31 +7,24 @@ FROM mcr.microsoft.com/playwright:v1.61.1-noble
 LABEL org.opencontainers.image.source="https://github.com/morningtzh/SlowDash"
 LABEL org.opencontainers.image.description="SlowDash — thin-client dashboard server"
 
-# Avoid prompts during apt
-ENV DEBIAN_FRONTEND=noninteractive \
-    NODE_ENV=production
+ENV NODE_ENV=production
 
-# Create app user (non-root, best practice)
+# Create app user (non-root) + directories
 RUN groupadd --gid 1001 slowdash && \
-    useradd --uid 1001 --gid slowdash --create-home --shell /bin/bash slowdash
-
-# Create required directories
-RUN mkdir -p /etc/slowdash /var/lib/slowdash/output && \
+    useradd --uid 1001 --gid slowdash --create-home --shell /bin/bash slowdash && \
+    mkdir -p /etc/slowdash /var/lib/slowdash/output && \
     chown -R slowdash:slowdash /etc/slowdash /var/lib/slowdash
 
-# Install Node.js app
+# Install Node.js dependencies
 WORKDIR /app
 COPY package*.json ./
+# Node 基金会在容器内没用，关掉加速 npm ci
+RUN npm config set fund false && \
+    npm config set audit false && \
+    npm ci --omit=dev
 
-# Install production dependencies + Playwright system deps already included in base image
-RUN npm ci --omit=dev && \
-    # Verify Playwright browsers are installed (base image should have them)
-    npx playwright install chromium 2>/dev/null || true
-
-# Copy source code
+# Copy source code and make scripts executable
 COPY . .
-
-# Ensure entrypoint scripts are executable
 RUN chmod +x oneshot.js server.js
 
 # Switch to non-root user
@@ -43,5 +36,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 EXPOSE 3000
 
-# Default: run the long-lived server
 ENTRYPOINT ["node", "server.js"]
