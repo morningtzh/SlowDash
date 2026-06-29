@@ -10,7 +10,8 @@
     "test": "jest",
     "preview": "node src/previewServer.js",
     "generate": "node oneshot.js",
-    "generate:ota": "node oneshot.js --release-ota"
+    "generate:ota": "node oneshot.js --release-ota",
+    "serve": "node server.js"
   },
   "repository": {
     "type": "git",

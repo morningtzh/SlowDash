@@ -1,0 +1,53 @@
+# =============================================================
+# SlowDash IngressRoute — Traefik CRD（HTTPS）
+#
+# 前置条件：
+#   1. 集群已安装 Traefik Ingress Controller 且支持 IngressRoute CRD
+#   2. 存在 TLS 证书（可通过 cert-manager 自动签发，或手动创建 Secret）
+#   3. 根据实际域名修改 host / tls.secretName
+# =============================================================
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: default
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: slowdash
+  namespace: default
+  annotations:
+    # 如果使用 cert-manager
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  entryPoints:
+    - web
+    - websecure
+
+  routes:
+    # HTTP → HTTPS 重定向
+    - kind: Rule
+      match: Host(`dash.yourdomain.com`)
+      priority: 10
+      middlewares:
+        - name: redirect-https
+          namespace: default
+      services:
+        - name: slowdash
+          port: 80
+
+    # HTTPS
+    - kind: Rule
+      match: Host(`dash.yourdomain.com`)
+      priority: 20
+      services:
+        - name: slowdash
+          port: 80
+
+  tls:
+    secretName: slowdash-tls    # TLS 证书 Secret，如使用 cert-manager 会自动创建

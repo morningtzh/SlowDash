@@ -1,0 +1,65 @@
+# =============================================================
+# SlowDash ConfigMap — 配置文件
+#
+# 使用方法（二选一）：
+#
+#   A. 直接通过 kubectl 从本地 config.yaml 创建（推荐，保留真实凭据）：
+#        kubectl create configmap slowdash-config \
+#          --from-file=config.yaml=./config.yaml \
+#          --dry-run=client -o yaml | kubectl apply -f -
+#
+#   B. 编辑下方的 data.config.yaml 填入真实值后 apply：
+#        kubectl apply -f k8s/configmap-template.yaml
+#
+# 注意：S3 凭据等敏感信息也可通过环境变量注入（见 deployment.yaml 中的
+#       S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY），此时 ConfigMap 中可留空。
+# =============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slowdash-config
+  namespace: default
+data:
+  config.yaml: |
+    settings:
+      resolution: "1072x1448"
+      color_mode: "grayscale"
+
+    # 输出存储配置
+    storage:
+      type: s3         # local | s3 | both
+      s3:
+        bucket: "your-bucket"
+        region: "auto"
+        endpoint: "https://your-s3-endpoint"
+        key_prefix: "dashboards/"
+        public: true
+        public_url: "https://your-public-url"
+
+    # 凭据与插件配置
+    credentials:
+      weather:
+        api_key: "YOUR_QWEATHER_KEY"
+        location: "101010100"
+        city_name: "北京"
+        api_host: "https://devapi.qweather.com"
+      ai_balance:
+        deepseek_key: "YOUR_DEEPSEEK_KEY"
+      plex:
+        url: "http://192.168.1.x:32400"
+        token: "YOUR_PLEX_TOKEN"
+      # ... 其他凭据
+
+    # 页面布局
+    layout:
+      - widget: weather
+        size: 4x1
+        type: hourly
+        row: 1
+        col: 1
+      - widget: clock
+        size: 1x2
+        type: digital
+        row: 1
+        col: 5
+      # ... 更多组件

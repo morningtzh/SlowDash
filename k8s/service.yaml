@@ -1,0 +1,19 @@
+# =============================================================
+# SlowDash Service — ClusterIP
+# =============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: slowdash
+  namespace: default
+  labels:
+    app: slowdash
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  selector:
+    app: slowdash

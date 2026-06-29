@@ -1,0 +1,118 @@
+# =============================================================
+# SlowDash Deployment
+# =============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slowdash
+  namespace: default
+  labels:
+    app: slowdash
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate           # 只有 1 个副本，避免同时截图冲突
+  selector:
+    matchLabels:
+      app: slowdash
+  template:
+    metadata:
+      labels:
+        app: slowdash
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: slowdash
+          image: slowdash:latest   # 构建后请替换为实际镜像 tag
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+              name: http
+
+          # --- 配置挂载 ---
+          volumeMounts:
+            - name: config
+              mountPath: /etc/slowdash/config.yaml
+              subPath: config.yaml
+              readOnly: true
+
+          # --- 环境变量（可覆盖 ConfigMap 中的值） ---
+          env:
+            # 刷新间隔（秒），默认 300（5 分钟）
+            - name: REFRESH_INTERVAL
+              value: "300"
+
+            # 输出目录（默认 /var/lib/slowdash/output）
+            - name: OUTPUT_DIR
+              value: "/var/lib/slowdash/output"
+
+            # 存储类型覆盖（local / s3 / both），优先级高于 config.yaml
+            - name: STORAGE_TYPE
+              value: ""
+
+            # --- S3 凭据（通过 Secret 注入，覆盖 config.yaml 中的值） ---
+            # 如果使用 ConfigMap 中的 S3 凭据，将这些留空或删除
+            - name: S3_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: slowdash-secrets    # 可选：创建一个 Secret 存放敏感凭据
+                  key: s3_access_key_id
+                  optional: true
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: slowdash-secrets
+                  key: s3_secret_access_key
+                  optional: true
+            - name: S3_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: slowdash-secrets
+                  key: s3_bucket
+                  optional: true
+            - name: S3_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: slowdash-secrets
+                  key: s3_endpoint
+                  optional: true
+
+            # 就绪探针：首次生成完成前允许暂时不可用
+            - name: ALWAYS_READY
+              value: "true"
+
+          # --- 存活探针 ---
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # --- 就绪探针 ---
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+
+          # --- 资源限制（Playwright/Chromium 比较吃内存） ---
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "1Gi"
+
+      # --- 配置文件卷 ---
+      volumes:
+        - name: config
+          configMap:
+            name: slowdash-config

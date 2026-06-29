@@ -1,0 +1,15 @@
+node_modules/
+.git/
+.gitignore
+.env
+config.yaml
+config.template.yaml
+generate.log
+reasonix.toml
+.playwright-mcp/
+output/
+docs/
+*.md
+.claude/
+__tests__/
+coverage/
