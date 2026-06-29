@@ -23,7 +23,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: slowdash
-          image: ghcr.io/morningtzh/SlowDash:docs-update-readme-usage
+          image: ghcr.io/morningtzh/slowdash:docs-update-readme-usage
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -36,6 +36,8 @@ spec:
               mountPath: /etc/slowdash/config.yaml
               subPath: config.yaml
               readOnly: true
+            - name: cache
+              mountPath: /app/output
 
           # --- 环境变量 ---
           env:
@@ -138,3 +140,5 @@ spec:
         - name: config
           configMap:
             name: slowdash-config
+        - name: cache
+          emptyDir: {}
