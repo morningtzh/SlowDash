@@ -13,7 +13,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches: [main, docs/update-readme-usage]
     tags: ['v*']
   workflow_dispatch:
 
