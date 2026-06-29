@@ -9,9 +9,9 @@ LABEL org.opencontainers.image.description="SlowDash — thin-client dashboard s
 
 ENV NODE_ENV=production
 
-# Create app user (non-root) + directories
-RUN groupadd --gid 1001 slowdash && \
-    useradd --uid 1001 --gid slowdash --create-home --shell /bin/bash slowdash && \
+# Create app user (non-root) — use high UID to avoid conflicts with base image users
+RUN groupadd --gid 10001 slowdash && \
+    useradd --uid 10001 --gid 10001 --create-home --shell /bin/bash slowdash && \
     mkdir -p /etc/slowdash /var/lib/slowdash/output && \
     chown -R slowdash:slowdash /etc/slowdash /var/lib/slowdash
 
