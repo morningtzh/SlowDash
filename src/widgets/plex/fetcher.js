@@ -56,6 +56,7 @@ module.exports = async function(config) {
 };
 module.exports.supportedSizes = ['small', 'medium', '4x2', 'large', '4x4', '5x2', '2x3'];
 module.exports.galleryVariants = [
+  { size: '5x2', type: 'poster_wall' },
   { size: '5x2', type: 'recently_added' },
   { size: '2x3', type: 'random_poster' },
   { size: '5x4', type: 'background' }

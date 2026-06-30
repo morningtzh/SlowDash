@@ -9,12 +9,6 @@
 <% if (typeof isPreview !== 'undefined' && isPreview) { %>
 <!-- ================= 浏览器预览模式 (带 Kindle 手机壳) ================= -->
 <body class="bg-gray-300 flex justify-center items-center py-10 min-h-screen relative">
-  <!-- 导航按钮 -->
-  <div class="absolute top-4 left-4 flex gap-4 z-50">
-    <a href="/gallery" class="bg-black text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-800 transition">🎨 去画廊 (Gallery) 看看</a>
-    <button onclick="window.location.reload()" class="bg-white text-black border-2 border-black px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-100 transition">🔄 强制刷新</button>
-    <button onclick="toggleGrid()" class="bg-pink-100 text-pink-700 border-2 border-pink-300 px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-pink-200 transition">📏 显示/隐藏网格</button>
-  </div>
 
   <!-- Kindle 设备外壳 -->
   <div style="width: 680px; height: 960px; background: #2a2a2a; border-radius: 40px; padding: 70px 40px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.1); position: relative; display: flex; flex-direction: column; align-items: center;">
