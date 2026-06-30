@@ -50,6 +50,18 @@ function buildCredOverrides() {
   return overrides;
 }
 
+/** Deep-merge source into target (only own enumerable keys, no arrays) */
+function deepMerge(target, source) {
+  for (const [k, v] of Object.entries(source)) {
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      if (!target[k] || typeof target[k] !== 'object') target[k] = {};
+      deepMerge(target[k], v);
+    } else if (v !== undefined) {
+      target[k] = v;
+    }
+  }
+}
+
 // =============================================================
 // Status tracking (used by generation loop & status endpoint)
 // =============================================================
@@ -118,6 +130,8 @@ app.get('/', async (req, res) => {
       return res.status(404).type('text/plain').send('config.yaml not found');
     }
     const config = await parseConfig(CONFIG_PATH);
+    // Apply credential overrides from env (CRED__) so preview shows real data
+    deepMerge(config.credentials, buildCredOverrides());
     let widgetsHtml = '';
     for (const item of config.layout) {
       if (item.row && Array.isArray(item.row)) {
@@ -149,6 +163,7 @@ app.get('/gallery', async (req, res) => {
     const widgetNames = fs.readdirSync(widgetsDir).filter(f =>
       fs.statSync(path.join(widgetsDir, f)).isDirectory());
     const config = fs.existsSync(CONFIG_PATH) ? await parseConfig(CONFIG_PATH) : { credentials: {} };
+    deepMerge(config.credentials, buildCredOverrides());
     let galleryHtml = `
       <div class="max-w-7xl mx-auto p-8 relative">
         <div class="absolute top-8 left-8 flex gap-4">
