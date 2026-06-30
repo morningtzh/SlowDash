@@ -21,9 +21,6 @@ kind: IngressRoute
 metadata:
   name: slowdash
   namespace: default
-  annotations:
-    # 如果使用 cert-manager
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   entryPoints:
     - web
@@ -50,4 +47,4 @@ spec:
           port: 80
 
   tls:
-    secretName: slowdash-tls    # TLS 证书 Secret，如使用 cert-manager 会自动创建
+    certResolver: morningtzhcom
