@@ -112,7 +112,10 @@ app.get('/status', (_req, res) => {
   });
 });
 
-// Serve the latest dashboard PNG
+// Serve the latest dashboard PNG (root redirect for convenience)
+app.get('/', (_req, res) => {
+  res.redirect('/dashboard.png');
+});
 app.get('/dashboard.png', (_req, res) => {
   const pngPath = path.join(OUTPUT_DIR, 'dashboard.png');
   if (fs.existsSync(pngPath)) {
