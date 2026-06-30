@@ -48,6 +48,8 @@ spec:
               value: "/var/lib/slowdash/output"
             - name: ALWAYS_READY
               value: "true"
+            - name: CONFIG_PATH
+              value: "/etc/slowdash/config.yaml"
 
             # ── S3 凭据 (从 Secret 注入，覆盖 config.yaml 空值) ──
             - name: S3_ACCESS_KEY_ID
