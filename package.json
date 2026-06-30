@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "jest",
-    "preview": "node src/previewServer.js",
+    "start": "node server.js",
+    "preview": "node server.js",
     "generate": "node oneshot.js",
     "generate:ota": "node oneshot.js --release-ota",
     "serve": "node server.js"
