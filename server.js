@@ -92,6 +92,77 @@ async function runGeneration() {
 }
 
 // =============================================================
+// Unified navigation: "SlowDash ▾" dropdown (方案 C)
+// =============================================================
+function renderNavbar(active) {
+  const pages = [
+    { id: 'home',    label: '主页',     path: '/' },
+    { id: 'gallery', label: '组件画廊',  path: '/gallery' },
+    { id: 'png',     label: '当前看板',  path: '/png' },
+  ];
+  const activeIdx = pages.findIndex(p => p.id === active);
+  const navStyle = `
+    position:fixed;top:0;left:0;z-index:1000;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;
+    user-select:none;
+  `;
+  // 左上角触发按钮
+  let html = `<div style="${navStyle}">`;
+  html += `<div class="sd-dropdown-btn" style="
+    background:#222;color:#fff;padding:8px 14px;border-radius:0 0 8px 0;
+    cursor:pointer;display:inline-block;font-weight:600;letter-spacing:0.5px;
+  ">SlowDash ▾</div>`;
+  // 下拉菜单
+  html += `<div class="sd-dropdown-menu" style="
+    display:none;position:absolute;top:36px;left:0;min-width:140px;
+    background:#222;border-radius:0 8px 8px 0;padding:6px 0;
+    box-shadow:0 4px 16px rgba(0,0,0,0.3);
+  ">`;
+  for (let i = 0; i < pages.length; i++) {
+    const p = pages[i];
+    const activeClass = i === activeIdx ? 'font-weight:700;background:#444;' : '';
+    html += `<a href="${p.path}" style="
+      display:block;padding:8px 18px;color:#fff;text-decoration:none;
+      ${activeClass}transition:background .15s;
+    " onmouseover="this.style.background='#444'" onmouseout="this.style.background='${i === activeIdx ? '#444' : 'transparent'}'">${p.label}</a>`;
+  }
+  // 分隔线 + 功能按钮
+  html += `<div style="height:1px;background:#444;margin:4px 12px"></div>`;
+  // 📏 网格 — 仅主页/画廊显示
+  if (active === 'home' || active === 'gallery') {
+    html += `<a href="#" onclick="event.preventDefault();toggleGrid();this.blur();return false" style="display:block;padding:8px 18px;color:#aaa;text-decoration:none;transition:background .15s;" onmouseover="this.style.background='#444'" onmouseout="this.style.background='transparent'">📏 网格</a>`;
+  }
+  html += `<a href="#" onclick="event.preventDefault();location.reload();this.blur();return false" style="display:block;padding:8px 18px;color:#aaa;text-decoration:none;transition:background .15s;" onmouseover="this.style.background='#444'" onmouseout="this.style.background='transparent'">🔄 刷新</a>`;
+  html += `</div></div>`;
+
+  // CSS 控制 hover/click 显示
+  html += `<style>
+    .sd-dropdown-btn:hover + .sd-dropdown-menu,
+    .sd-dropdown-menu:hover,
+    .sd-dropdown-btn:focus + .sd-dropdown-menu { display:block !important; }
+    .sd-dropdown-btn + .sd-dropdown-menu { display:none; }
+    @media (hover:none) {
+      .sd-dropdown-btn + .sd-dropdown-menu { display:none; }
+      .sd-dropdown-btn.show + .sd-dropdown-menu { display:block !important; }
+    }
+  </style>
+  <script>
+    document.querySelector('.sd-dropdown-btn').addEventListener('click',function(e){
+      var m=this.nextElementSibling;
+      var isTouch='ontouchstart'in window;
+      if(isTouch){e.preventDefault();this.classList.toggle('show');m.style.display=m.style.display==='block'?'none':'block';}
+    });
+    document.addEventListener('click',function(e){
+      if(!e.target.closest('.sd-dropdown-btn,.sd-dropdown-menu')){
+        var btn=document.querySelector('.sd-dropdown-btn');
+        if(btn){btn.classList.remove('show');btn.nextElementSibling.style.display='none';}
+      }
+    });
+  </script>`;
+  return html;
+}
+
+// =============================================================
 // Express app
 // =============================================================
 const app = express();
@@ -148,7 +219,8 @@ app.get('/', async (req, res) => {
     }
     const baseTmpl = path.join(PROJECT_ROOT, 'src/templates/base.ejs');
     const html = await ejs.renderFile(baseTmpl, { widgetsHtml, backgroundHtml: bgHtml, isPreview: true });
-    res.send(html);
+    // Inject unified navbar at the top
+    res.send(renderNavbar('home') + html);
   } catch (err) {
     console.error(err);
     res.status(500).send(`<pre>${err.stack}</pre>`);
@@ -164,15 +236,9 @@ app.get('/gallery', async (req, res) => {
       fs.statSync(path.join(widgetsDir, f)).isDirectory());
     const config = fs.existsSync(CONFIG_PATH) ? await parseConfig(CONFIG_PATH) : { credentials: {} };
     deepMerge(config.credentials, buildCredOverrides());
-    let galleryHtml = `
-      <div class="max-w-7xl mx-auto p-8 relative">
-        <div class="absolute top-8 left-8 flex gap-4">
-          <a href="/" class="bg-black text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-800 transition">← 主面板</a>
-          <a href="/png" class="bg-black text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-800 transition">📷 当前看板</a>
-          <button onclick="window.location.reload()" class="bg-white text-black border-2 border-black px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-gray-100 transition">🔄 刷新</button>
-          <button onclick="toggleGrid()" class="bg-pink-100 text-pink-700 border-2 border-pink-300 px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-pink-200 transition">📏 网格</button>
-        </div>
-        <h1 class="text-4xl font-bold mb-4 text-center text-gray-800 mt-12">SlowDash Widget Gallery</h1>
+    // Gallery 内容（在内联 nav 按钮之前插入 navbar）
+    let galleryHtml = `<div class="max-w-7xl mx-auto p-8 relative" style="padding-top:60px">
+        <h1 class="text-4xl font-bold mb-4 text-center text-gray-800">SlowDash Widget Gallery</h1>
         <p class="text-center text-gray-600 mb-12">浏览所有可用组件的尺寸形态（数据均为演示效果）。</p>`;
 
     for (const wName of widgetNames) {
@@ -223,7 +289,7 @@ app.get('/gallery', async (req, res) => {
       <title>Widget Gallery - SlowDash</title>
       <script src="https://cdn.tailwindcss.com"></script>
       <style>body{background:#f3f4f6}</style></head>
-      <body class="text-gray-900">${galleryHtml}</div>
+      <body class="text-gray-900">${renderNavbar('gallery')}${galleryHtml}</div>
       <script>function toggleGrid(){document.querySelectorAll('.grid-overlay-item').forEach(e=>e.classList.toggle('hidden'))}</script>
       </body></html>`);
   } catch (err) {
@@ -232,59 +298,83 @@ app.get('/gallery', async (req, res) => {
   }
 });
 
-// ---- /png — 当前看板展示页 (新增) ----
+// ---- /png — 当前看板展示页 ----
 
 app.get('/png', (req, res) => {
   const pngPath = path.join(OUTPUT_DIR, 'dashboard.png');
   const exists = fs.existsSync(pngPath);
-  let imgTag, infoLine;
+  let imgTag;
   if (exists) {
     const stat = fs.statSync(pngPath);
     const sizeKB = (stat.size / 1024).toFixed(0);
-    const mtime = stat.mtime.toLocaleString('zh-CN');
-    imgTag = `<img src="/dashboard.png?t=${Date.now()}" style="max-width:100%;max-height:75vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);image-rendering:pixelated;">`;
-    infoLine = `<span style="color:#666;font-size:13px;">${sizeKB}KB · ${mtime}`;
-    if (lastSuccessTime) {
-      const nextRefresh = lastSuccessTime + REFRESH_SEC * 1000;
-      const remaining = Math.max(0, Math.round((nextRefresh - Date.now()) / 1000));
-      infoLine += remaining > 0 ? ` · 下次刷新 ${remaining}s 后</span>` : ' · 刷新中…</span>';
-    } else {
-      infoLine += '</span>';
-    }
+    imgTag = `<img src="/dashboard.png?t=${Date.now()}" style="max-width:100%;max-height:75vh;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);image-rendering:pixelated;" alt="SlowDash 看板">`;
   } else {
-    imgTag = `<div style="background:#f0f0f0;border:2px dashed #ccc;border-radius:12px;padding:60px 40px;color:#999;font-size:18px;">尚未生成看板图片<br><span style="font-size:14px;">首次生成后自动显示</span></div>`;
-    infoLine = '<span style="color:#999;">暂无图片</span>';
+    imgTag = `<div style="background:#f0f0f0;border:2px dashed #ccc;border-radius:12px;padding:60px 40px;color:#999;font-size:18px;text-align:center">⏳ 看板尚未生成<br><span style="font-size:14px;">首次生成后自动显示</span></div>`;
   }
 
   res.send(`<!DOCTYPE html><html lang="zh-CN"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>SlowDash 看板</title>
+    <title>SlowDash 当前看板</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box}
-      body{background:#e8e8e8;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:24px 16px}
-      nav{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;justify-content:center}
-      nav a{background:#fff;color:#333;text-decoration:none;padding:8px 18px;border-radius:8px;font-size:14px;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.1);transition:all .15s}
-      nav a:hover{background:#222;color:#fff}
-      h1{font-size:22px;font-weight:700;margin-bottom:6px;color:#333}
-      .info{color:#666;font-size:13px;margin-bottom:20px}
-      .frame{background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:90vw;display:flex;flex-direction:column;align-items:center}
-      .auto-refresh label{font-size:13px;color:#666;cursor:pointer;user-select:none}
+      body{background:#e8e8e8;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:60px 16px 24px}
+      h1{font-size:20px;font-weight:700;margin-bottom:4px;color:#333}
+      .frame{background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:90vw;display:flex;flex-direction:column;align-items:center;margin-bottom:20px}
+      .info{color:#666;font-size:13px;margin-bottom:14px;text-align:center;line-height:1.6}
+      .info .ok{color:#2a2;font-weight:600}
+      .info .err{color:#c33;font-weight:600}
+      .info .label{color:#999}
     </style></head><body>
-    <nav>
-      <a href="/">🏠 预览</a>
-      <a href="/gallery">🎨 画廊</a>
-      <a href="/status">📊 状态</a>
-      <a href="/dashboard.png" download>⬇️ 下载</a>
-    </nav>
-    <h1>SlowDash 看板</h1>
-    <div class="info">${infoLine}</div>
+    ${renderNavbar('png')}
+    <h1>📋 SlowDash 当前看板</h1>
+    <div class="info" id="status">加载中…</div>
     <div class="frame">${imgTag}</div>
-    <div style="margin-top:16px" class="auto-refresh">
-      <label><input type="checkbox" id="autoReload" checked onchange="toggleReload()"> 自动刷新（30s）</label>
+    <div style="margin-top:4px">
+      <label style="font-size:13px;color:#666;cursor:pointer;user-select:none">
+        <input type="checkbox" id="autoReload" checked onchange="toggleReload()"> 自动刷新（30s）
+      </label>
     </div>
     <script>
-      let timer;
-      function toggleReload(){if(document.getElementById('autoReload').checked){timer=setInterval(()=>location.reload(),30000)}else{clearInterval(timer)}}
+      // 状态轮询
+      var statusEl = document.getElementById('status');
+      var lastSuccess = ${lastSuccessTime || 0};
+      var refreshSec = ${REFRESH_SEC};
+      function updateStatus() {
+        fetch('/status').then(function(r){return r.json()}).then(function(d){
+          var parts = [];
+          if (d.lastGeneration) {
+            var t = new Date(d.lastGeneration);
+            parts.push('<span class="label">上次生成</span> ' + t.toLocaleString('zh-CN'));
+            if (refreshSec > 0 && lastSuccess > 0) {
+              var next = lastSuccess + refreshSec * 1000;
+              var rem = Math.max(0, Math.round((next - Date.now()) / 1000));
+              if (rem > 0) {
+                var m = Math.floor(rem / 60), s = rem % 60;
+                parts.push('<span class="label">下次刷新</span> ' + m + '分' + s + '秒后');
+              } else {
+                parts.push('<span class="label">下次刷新</span> 即将开始…');
+              }
+            } else if (refreshSec === 0) {
+              parts.push('<span class="label">模式</span> 手动');
+            }
+            if (d.lastError) {
+              parts.push('<span class="err">❌ 失败:</span> ' + d.lastError);
+            } else {
+              parts.push('<span class="ok">✅ 正常</span>');
+            }
+          } else {
+            parts.push('⏳ 尚未生成');
+          }
+          statusEl.innerHTML = parts.join(' · ');
+        }).catch(function(){
+          statusEl.innerHTML = '<span class="err">⚠️ 无法连接</span>';
+        });
+      }
+      updateStatus();
+      setInterval(updateStatus, 3000);
+      // 自动刷新
+      var timer;
+      function toggleReload(){if(document.getElementById('autoReload').checked){timer=setInterval(function(){location.reload()},30000)}else{clearInterval(timer)}}
       document.getElementById('autoReload').dispatchEvent(new Event('change'));
     </script>
   </body></html>`);
